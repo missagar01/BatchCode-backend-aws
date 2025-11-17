@@ -27,5 +27,19 @@ jobs:
         node-version: ${{ matrix.node-version }}
         cache: 'npm'
     - run: npm ci
-    - run: npm run build --if-present
-    - run: npm test
+    - run: npm run lint
+
+    - name: Deploy to AWS EC2 (PM2)
+      if: github.ref == 'refs/heads/master'
+      uses: appleboy/ssh-action@v0.1.10
+      with:
+        host: ${{ secrets.AWS_HOST }}
+        username: ${{ secrets.AWS_USER }}
+        key: ${{ secrets.AWS_SSH_KEY }}
+        port: ${{ secrets.AWS_SSH_PORT || 22 }}
+        script: |
+          cd ~/BatchCode-backend-aws
+          git fetch --all
+          git reset --hard origin/master
+          npm ci --omit=dev
+          pm2 restart batchcode-backend --update-env

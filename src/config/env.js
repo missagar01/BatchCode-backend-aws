@@ -9,7 +9,7 @@ const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   PORT: z
     .string()
-    .default('3005')
+    .default('3004')
     .transform((value) => Number(value))
     .refine((value) => Number.isInteger(value) && value > 0, 'PORT must be a positive integer'),
   DATABASE_URL: z.string().optional(),

@@ -78,9 +78,11 @@ const ensureHotCoilTable = async () => {
       id SERIAL PRIMARY KEY,
       sample_timestamp TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
       sms_short_code TEXT,
+      submission_type TEXT,
       size TEXT,
       mill_incharge TEXT,
       quality_supervisor TEXT,
+      picture TEXT,
       electrical_dc_operator TEXT,
       remarks TEXT,
       strand1_temperature TEXT,
@@ -91,6 +93,8 @@ const ensureHotCoilTable = async () => {
   `;
   await pool.query(ddl);
   await pool.query('CREATE UNIQUE INDEX IF NOT EXISTS idx_hot_coil_unique_code ON hot_coil (unique_code)');
+  await pool.query('ALTER TABLE hot_coil ADD COLUMN IF NOT EXISTS submission_type TEXT');
+  await pool.query('ALTER TABLE hot_coil ADD COLUMN IF NOT EXISTS picture TEXT');
   logger.info('Ensured hot_coil table and unique code index exist');
 };
 

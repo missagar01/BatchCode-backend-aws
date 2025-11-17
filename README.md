@@ -115,9 +115,11 @@ curl -X POST http://localhost:3004/hot-coil \
   -H "Content-Type: application/json" \
   -d '{
         "sms_short_code": "SMS-21",
-        "size": "12mm",
+        "submission_type": "Hot Coil Section",
+        "size": "146x148x2.90",
         "mill_incharge": "Rahul Sharma",
         "quality_supervisor": "Seema Roy",
+        "picture": "https://example.com/coil.jpg",
         "electrical_dc_operator": "Operator 1",
         "remarks": "Coil ready for shipment",
         "strand1_temperature": "1350C",
@@ -126,7 +128,18 @@ curl -X POST http://localhost:3004/hot-coil \
       }'
 ```
 
-Hot coil entries auto-stamp the current timestamp when not provided and assign a unique `H-XXXX` code (uppercase alphanumeric). Provide `sample_timestamp` if you need to overwrite the default; `shift_supervisor` can be omitted or sent empty.
+Hot coil entries auto-stamp the current timestamp when not provided and assign a unique `H-XXXX` code (uppercase alphanumeric). Provide `sample_timestamp` if you need to overwrite the default; both `picture` and `remarks` are optional—send either a hosted URL or omit them entirely. To upload a file directly, send `multipart/form-data` with a `picture` field (any image MIME type) and the API will persist the `/uploads/hot-coil-pictures/<filename>` URL in the database. When the Google Form submission selects **Cold Billet**, only `sms_short_code` and `submission_type` are required—the backend generates the `unique_code` and stores the remaining columns as `NULL`, so no other fields are necessary:
+
+```bash
+curl -X POST http://localhost:3004/hot-coil \
+  -H "Content-Type: application/json" \
+  -d '{
+        "sms_short_code": "SMS-99",
+        "submission_type": "Cold Billet"
+      }'
+```
+
+If you want to send the **full form** (including optional image upload) through Postman, switch the body to `form-data` and supply all fields shown above along with a `picture` file. The backend will normalize blank strings to `NULL`, store uploaded images under `/uploads/hot-coil-pictures/<filename>`, and return the persisted row with an auto-generated `H-XXXX` code.
 
 ### Re-Coiler payload
 

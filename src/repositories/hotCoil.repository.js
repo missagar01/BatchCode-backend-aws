@@ -4,14 +4,16 @@ const insertHotCoil = async (payload) => {
   const {
     sample_timestamp,
     sms_short_code,
-    size,
-    mill_incharge,
-    quality_supervisor,
-    electrical_dc_operator,
+    submission_type,
+    size = null,
+    mill_incharge = null,
+    quality_supervisor = null,
+    picture = null,
+    electrical_dc_operator = null,
     remarks = null,
-    strand1_temperature,
-    strand2_temperature,
-    shift_supervisor,
+    strand1_temperature = null,
+    strand2_temperature = null,
+    shift_supervisor = null,
     unique_code
   } = payload;
 
@@ -19,9 +21,11 @@ const insertHotCoil = async (payload) => {
     INSERT INTO hot_coil (
       sample_timestamp,
       sms_short_code,
+      submission_type,
       size,
       mill_incharge,
       quality_supervisor,
+      picture,
       electrical_dc_operator,
       remarks,
       strand1_temperature,
@@ -29,16 +33,18 @@ const insertHotCoil = async (payload) => {
       shift_supervisor,
       unique_code
     )
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
     RETURNING *
   `;
 
   const values = [
     sample_timestamp ?? null,
     sms_short_code,
+    submission_type,
     size,
     mill_incharge,
     quality_supervisor,
+    picture,
     electrical_dc_operator,
     remarks,
     strand1_temperature,
