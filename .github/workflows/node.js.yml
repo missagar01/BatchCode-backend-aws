@@ -8,10 +8,17 @@ on:
 jobs:
   deploy:
     runs-on: self-hosted
+    env:
+      RUNNER_TOOL_CACHE: /home/ubuntu/actions-runner/_Work/_tool
+      RUNNER_TEMP: /home/ubuntu/actions-runner/_Work/_temp
 
     steps:
       - name: 📥 Checkout code
         uses: actions/checkout@v4
+
+      - name: 🛠 Prepare runner temp directories
+        run: |
+          mkdir -p "$RUNNER_TOOL_CACHE" "$RUNNER_TEMP"
 
       - name: 🟢 Setup Node.js
         uses: actions/setup-node@v4

@@ -236,6 +236,7 @@ const ensureLaddleChecklistTable = async () => {
   logger.info('Ensured laddle_checklist table and unique code index exist');
 };
 
+
 const ensureLaddleReturnTable = async () => {
   const ddl = `
     CREATE TABLE IF NOT EXISTS laddle_return (
