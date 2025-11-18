@@ -15,6 +15,7 @@ jobs:
     env:
       RUNNER_TEMP: /home/ubuntu/actions-runner/_temp
       RUNNER_TOOL_CACHE: /home/ubuntu/actions-runner/_tool
+      DEPLOY_DIR: /home/ubuntu/BatchCode-backend-aws
 
     steps:
       - name: "📥 Checkout code"
@@ -30,10 +31,11 @@ jobs:
           node-version: 20
           cache: npm
 
-      - name: "📦 Install dependencies"
+      # Workspace (temp) me dependencies install kar lena (tests wagaira ke liye)
+      - name: "📦 Install dependencies (workspace)"
         run: npm ci
 
-      # ये step सही तरीके से check करेगा कि build script मौजूद है या नहीं
+      # Agar build script hai to hi build kare
       - name: "🧪 Build (if script exists)"
         run: |
           if node -e "const p=require('./package.json'); process.exit(p.scripts && p.scripts.build ? 0 : 1)"; then
@@ -43,6 +45,14 @@ jobs:
             echo "ℹ️ Build script नहीं मिला, build step skip कर रहे हैं।"
           fi
 
+      # 🚚 Actual deployment: code ko /home/ubuntu/BatchCode-backend-aws me sync karo
+      - name: "📂 Sync code to deploy directory"
+        run: |
+          echo "Syncing code to $DEPLOY_DIR ..."
+          mkdir -p "$DEPLOY_DIR"
+          rsync -av --delete ./ "$DEPLOY_DIR"/
+
+      # 🔁 Deploy with PM2 from DEPLOY_DIR
       - name: "🚀 Deploy with PM2 (src/server.js)"
         shell: bash
         run: |
@@ -55,10 +65,14 @@ jobs:
           fi
 
           APP_NAME="batchcode-backend"
-          APP_CWD="$(pwd)"   # अभी के repo का path (GitHub workspace)
 
           echo "Using APP_NAME=$APP_NAME"
-          echo "Using APP_CWD=$APP_CWD"
+          echo "Using DEPLOY_DIR=$DEPLOY_DIR"
+
+          cd "$DEPLOY_DIR"
+
+          # Deploy dir me dependencies install/update करो
+          npm ci
 
           # अगर पहले से process है तो reload करो, नहीं है तो नया start करो
           if pm2 describe "${APP_NAME}" >/dev/null 2>&1; then
@@ -66,7 +80,7 @@ jobs:
             pm2 reload "${APP_NAME}" --update-env
           else
             echo "✨ PM2 process नहीं मिला, नया start कर रहे हैं…"
-            pm2 start "${APP_CWD}/src/server.js" --name "${APP_NAME}"
+            pm2 start "$DEPLOY_DIR/src/server.js" --name "${APP_NAME}"
           fi
 
           # Process list save (reboot के बाद के लिए)
