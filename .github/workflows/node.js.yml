@@ -2,24 +2,27 @@ name: "🚀 Node.js CI & Deploy to EC2"
 
 on:
   push:
-    branches: [ "master" ]
+    branches: [ "master" ]   # yahi branch pe deploy chahiye
   workflow_dispatch:
 
 jobs:
   deploy:
-    runs-on: self-hosted
+    runs-on:
+      - self-hosted
+      - Linux
+      - X64
+
+    env:
+      RUNNER_TEMP: /home/ubuntu/actions-runner/_temp
+      RUNNER_TOOL_CACHE: /home/ubuntu/actions-runner/_tool
 
     steps:
       - name: "📥 Checkout code"
         uses: actions/checkout@v4
 
-      - name: "🛠 Configure runner temp directories"
+      - name: "🛠 Prepare temp/cache dirs"
         run: |
-          TOOL_CACHE=/home/ubuntu/actions-runner/_tool
-          TEMP_DIR=/home/ubuntu/actions-runner/_temp
-          mkdir -p "$TOOL_CACHE" "$TEMP_DIR"
-          echo "RUNNER_TOOL_CACHE=$TOOL_CACHE" >> "$GITHUB_ENV"
-          echo "RUNNER_TEMP=$TEMP_DIR" >> "$GITHUB_ENV"
+          mkdir -p "$RUNNER_TEMP" "$RUNNER_TOOL_CACHE"
 
       - name: "🟢 Setup Node.js"
         uses: actions/setup-node@v4
@@ -30,38 +33,44 @@ jobs:
       - name: "📦 Install dependencies"
         run: npm ci
 
+      # ये step सही तरीके से check करेगा कि build script मौजूद है या नहीं
       - name: "🧪 Build (if script exists)"
         run: |
-          if node -e "const pkg=require('./package.json'); if (pkg.scripts && pkg.scripts.build) process.exit(0); process.exit(1);" ; then
+          if node -e "const p=require('./package.json'); process.exit(p.scripts && p.scripts.build ? 0 : 1)"; then
+            echo "✅ Build script मिला, npm run build चला रहे हैं…"
             npm run build
           else
-            echo "No build script. Skipping."
+            echo "ℹ️ Build script नहीं मिला, build step skip कर रहे हैं।"
           fi
 
-      - name: "🚀 Deploy with PM2"
+      - name: "🚀 Deploy with PM2 (src/server.js)"
         shell: bash
         run: |
           set -e
 
+          # PM2 installed है या नहीं, check करें
           if ! command -v pm2 >/dev/null 2>&1; then
+            echo "PM2 नहीं मिला, install कर रहे हैं…"
             sudo npm i -g pm2
           fi
 
-          APP_NAME="backend"
-          APP_CWD="$(pwd)"
+          APP_NAME="batchcode-backend"
+          APP_CWD="$(pwd)"   # अभी के repo का path (GitHub workspace)
 
+          echo "Using APP_NAME=$APP_NAME"
+          echo "Using APP_CWD=$APP_CWD"
+
+          # अगर पहले से process है तो reload करो, नहीं है तो नया start करो
           if pm2 describe "${APP_NAME}" >/dev/null 2>&1; then
+            echo "🌀 Existing PM2 process मिला, reload कर रहे हैं…"
             pm2 reload "${APP_NAME}" --update-env
           else
-            pm2 start npm --name "${APP_NAME}" -- start --cwd "${APP_CWD}"
+            echo "✨ PM2 process नहीं मिला, नया start कर रहे हैं…"
+            pm2 start "${APP_CWD}/src/server.js" --name "${APP_NAME}"
           fi
 
+          # Process list save (reboot के बाद के लिए)
           pm2 save || true
 
-          if ! systemctl status pm2-ubuntu >/dev/null 2>&1; then
-            NODE_BIN_DIR="$(dirname "$(which node)")"
-            sudo env PATH="$PATH:$NODE_BIN_DIR" pm2 startup systemd -u ubuntu --hp /home/ubuntu || true
-            sudo systemctl enable pm2-ubuntu || true
-          fi
-
+          echo "✅ PM2 status:"
           pm2 status
