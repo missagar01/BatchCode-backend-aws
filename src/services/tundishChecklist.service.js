@@ -31,4 +31,12 @@ const createTundishChecklist = async (payload) => {
   throw new Error('Unable to generate a unique Tundish Checklist code after multiple attempts');
 };
 
-module.exports = { createTundishChecklist };
+const listTundishChecklists = async (filters = {}) =>
+  tundishChecklistRepository.findTundishChecklists(filters);
+
+const getTundishChecklistByUniqueCode = async (uniqueCode) => {
+  const [entry] = await tundishChecklistRepository.findTundishChecklists({ uniqueCode });
+  return entry ?? null;
+};
+
+module.exports = { createTundishChecklist, listTundishChecklists, getTundishChecklistByUniqueCode };

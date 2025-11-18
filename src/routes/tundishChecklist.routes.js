@@ -5,10 +5,11 @@ const { createTundishChecklistSchema } = require('../validations/tundishChecklis
 
 const router = Router();
 
-router.post(
-  '/tundish-checklist',
-  validateRequest(createTundishChecklistSchema),
-  tundishChecklistController.createEntry
-);
+router
+  .route('/tundish-checklist')
+  .post(validateRequest(createTundishChecklistSchema), tundishChecklistController.createEntry)
+  .get(tundishChecklistController.listEntries);
+
+router.get('/tundish-checklist/:unique_code', tundishChecklistController.getEntryByUniqueCode);
 
 module.exports = router;

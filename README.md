@@ -56,6 +56,8 @@ Available scripts:
 - `GET /laddle-checklist` - lists all laddle checklist entries or filters by `id`/`unique_code`
 - `GET /laddle-checklist/:unique_code` - fetch a single laddle checklist entry directly by its code
 - `POST /tundish-checklist` - records tundish checklist inspections with auto-generated `T-XXXX` codes
+- `GET /tundish-checklist` - lists all tundish checklist entries or filters by `id`/`unique_code`
+- `GET /tundish-checklist/:unique_code` - fetch a single tundish checklist entry directly by its code
 - `POST /laddle-return` - stores laddle return forms (with optional photo uploads) and auto-generated `L-XXXX` codes
 - `GET /laddle-return` - lists all laddle return entries or filters by `id`/`unique_code`
 - `GET /laddle-return/:unique_code` - fetch a single laddle return entry directly by its code
