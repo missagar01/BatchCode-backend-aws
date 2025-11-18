@@ -41,13 +41,24 @@ Available scripts:
 ## Current REST endpoints
 
 - `POST /qc-lab-samples` - persists a QC lab sample row in PostgreSQL
+- `GET /qc-lab-samples` - lists all QC lab samples or filters by `id`/`unique_code` via query params
+- `GET /qc-lab-samples/:unique_code` - fetch a single QC lab sample directly by its code
 - `POST /sms-register` - stores SMS register metadata with auto-generated `S-XXXX` codes
+- `GET /sms-register` - lists all SMS register entries or filters by `id`/`unique_code`
 - `POST /hot-coil` - captures hot coil production data with auto-generated `H-XXXX` codes
 - `POST /re-coiler` - records re-coiler data with auto-generated `R-XXXX` codes (letters + digits 1-9, no zero)
+- `GET /re-coiler` - lists all re-coiler entries or filters by `id`/`unique_code`
+- `GET /re-coiler/:unique_code` - fetch a single re-coiler entry directly by its code
 - `POST /pipe-mill` - saves pipe mill runs with optional image upload and auto-generated `P-XXXX` codes
+- `GET /pipe-mill` - lists all pipe mill entries or filters by `id`/`unique_code`
+- `GET /pipe-mill/:unique_code` - fetch a single pipe mill entry directly by its code
 - `POST /laddle-checklist` - logs laddle checklist inspections with auto-generated `C-XXXX` codes
+- `GET /laddle-checklist` - lists all laddle checklist entries or filters by `id`/`unique_code`
+- `GET /laddle-checklist/:unique_code` - fetch a single laddle checklist entry directly by its code
 - `POST /tundish-checklist` - records tundish checklist inspections with auto-generated `T-XXXX` codes
 - `POST /laddle-return` - stores laddle return forms (with optional photo uploads) and auto-generated `L-XXXX` codes
+- `GET /laddle-return` - lists all laddle return entries or filters by `id`/`unique_code`
+- `GET /laddle-return/:unique_code` - fetch a single laddle return entry directly by its code
 
 ### QC Lab Samples payload
 
@@ -55,39 +66,55 @@ Available scripts:
 curl -X POST http://localhost:3004/qc-lab-samples \
   -H "Content-Type: application/json" \
   -d '{
+        "sample_timestamp": "2024-06-01T07:30:00Z",
         "sms_batch_code": "SMS-2024-001",
-        "sampled_furnace_number": "F-01",
-        "sampled_sequence": "SEQ-1",
-        "sampled_laddle_number": "L-21",
-        "shift": "A",
+        "furnace_number": "F-01",
+        "sequence_code": "SEQ-1",
+        "laddle_number": 21,
+        "shift_type": "A",
         "final_c": 0.0512,
         "final_mn": 0.6500,
         "final_s": 0.0110,
         "final_p": 0.0230,
-        "sample_tested_by": "Technician A",
+        "tested_by": "Technician A",
         "remarks": "Within tolerance",
-        "test_report_picture": "https://example.com/report.jpg"
+        "report_picture": "https://example.com/report.jpg"
       }'
 ```
 
-The payload aligns with the `qc_lab_samples` table definition and is validated through Zod before being persisted. The `code` column is automatically generated on the server with the format `QC-XXXX` (uppercase letters) and deduplicated with a unique index, so no manual input is needed.
+The payload aligns with the `qc_lab_samples` table definition and is validated through Zod before being persisted. `sample_timestamp` defaults to the server time when omitted, and the `unique_code` column is automatically generated on the server with the format `QC-XXXX` (uppercase letters) and deduplicated with a unique index, so no manual input is needed.
 
-To upload an image directly, send `multipart/form-data` with a `test_report_picture` file field (any standard image MIME type). The backend stores the file under `uploads/test-report-pictures` and only the URL is stored in the database, so clients just render the link that comes back:
+To upload an image directly, send `multipart/form-data` with a `report_picture` file field (any standard image MIME type). The backend persists the file under `/uploads` and only the URL is stored in the database, so clients just render the link that comes back:
 
 ```bash
 curl -X POST http://localhost:3004/qc-lab-samples \
   -H "Content-Type: multipart/form-data" \
+  -F "sample_timestamp=2024-06-01T07:30:00Z" \
   -F "sms_batch_code=SMS-2024-001" \
-  -F "sampled_furnace_number=F-01" \
-  -F "sampled_sequence=SEQ-1" \
-  -F "sampled_laddle_number=L-21" \
-  -F "shift=A" \
+  -F "furnace_number=F-01" \
+  -F "sequence_code=SEQ-1" \
+  -F "laddle_number=21" \
+  -F "shift_type=A" \
   -F "final_c=0.0512" \
-  -F "sample_tested_by=Technician A" \
-  -F "test_report_picture=@/path/to/report.png"
+  -F "tested_by=Technician A" \
+  -F "report_picture=@/path/to/report.png"
 ```
 
 Uploaded files are served statically from `/uploads`, so clients can render them by referencing the URL returned in the POST response.
+
+To read data back, hit the same resource with `GET` and optional filters. For example, to fetch a single row by its auto-generated code:
+
+```bash
+curl "http://localhost:3004/qc-lab-samples?unique_code=QC-ABCD"
+```
+
+You can also retrieve it directly via the path parameter:
+
+```bash
+curl "http://localhost:3004/qc-lab-samples/QC-ABCD"
+```
+
+Omit query parameters to receive the most recent samples ordered by timestamp.
 
 ### SMS Register payload
 
@@ -102,11 +129,22 @@ curl -X POST http://localhost:3004/sms-register \
         "furnace_number": "F-02",
         "remarks": "Heat looks stable",
         "shift_incharge": "Incharge C",
-        "temprature": 1542
+        "picture": "https://drive.google.com/photo.png",
+        "temperature": 1542
       }'
 ```
 
-Each SMS register row automatically receives a unique code formatted as `S-xxxx` (uppercase alphanumeric characters) and, if `sample_timestamp` is omitted, the server automatically stores the current timestamp; no image upload is required for this endpoint.
+Each SMS register row automatically receives a unique code formatted as `S-xxxx` (uppercase alphanumeric characters) and, if `sample_timestamp` is omitted, the server automatically stores the current timestamp. The `picture` field is optional—supply a hosted link (for example, a Google Drive URL) or omit it entirely—and `remarks` can also be left blank.
+
+To upload a photo directly instead of a URL, switch Postman to `form-data`, include the same text fields, and attach a file for `picture`. The API stores the file under `/uploads/sms-register-pictures` and rewrites the request body with the final URL before validation, so the rest of the workflow is unchanged.
+
+Retrieve existing SMS register entries with a simple GET call; filter by `id` or `unique_code` if you only want a specific record:
+
+```bash
+curl "http://localhost:3004/sms-register?unique_code=S-1A2B"
+```
+
+Calling `GET /sms-register` without filters returns all entries ordered by the most recent timestamp.
 
 ### Hot Coil payload
 
@@ -160,6 +198,25 @@ curl -X POST http://localhost:3004/re-coiler \
 
 Re-coiler entries follow the same timestamp defaulting rules, so omitting `sample_timestamp` stores the server time automatically. The backend also generates a `unique_code` formatted as `R-XXXX`, where `XXXX` is made of uppercase letters and digits 1-9 (zero is excluded) to match the production requirement.
 
+Query the saved entries with either `GET /re-coiler?unique_code=R-9IA7` or `GET /re-coiler/R-9IA7`. Leaving off the filters returns the newest entries first.
+
+```sql
+CREATE TABLE IF NOT EXISTS re_coiler (
+    id SERIAL PRIMARY KEY,
+    sample_timestamp TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    hot_coiler_short_code VARCHAR(50) NOT NULL,
+    size VARCHAR(50),
+    supervisor VARCHAR(100),
+    incharge VARCHAR(100),
+    contractor VARCHAR(100),
+    machine_number VARCHAR(50),
+    welder_name VARCHAR(100),
+    unique_code VARCHAR(50) NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_re_coiler_unique_code ON re_coiler (unique_code);
+```
+
 ### Pipe Mill payload
 
 ```bash
@@ -189,22 +246,33 @@ Send `multipart/form-data` with a `picture` field (any image MIME type) to uploa
 CREATE TABLE IF NOT EXISTS pipe_mill (
     id SERIAL PRIMARY KEY,
     sample_timestamp TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    recoiler_short_code TEXT,
-    mill_number TEXT,
-    section TEXT,
-    item_type TEXT,
-    quality_supervisor TEXT,
-    mill_incharge TEXT,
-    forman_name TEXT,
-    fitter_name TEXT,
-    shift TEXT,
-    size TEXT,
-    thickness TEXT,
+    recoiler_short_code VARCHAR(50) NOT NULL,
+    mill_number VARCHAR(100) NOT NULL,
+    section VARCHAR(50),
+    item_type VARCHAR(50),
+    quality_supervisor VARCHAR(100) NOT NULL,
+    mill_incharge VARCHAR(100) NOT NULL,
+    forman_name VARCHAR(100) NOT NULL,
+    fitter_name VARCHAR(100) NOT NULL,
+    shift VARCHAR(20) NOT NULL,
+    size VARCHAR(50) NOT NULL,
+    thickness VARCHAR(30),
     remarks TEXT,
     picture TEXT,
-    unique_code TEXT UNIQUE
+    unique_code VARCHAR(50) NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW()
 );
+CREATE UNIQUE INDEX IF NOT EXISTS idx_pipe_mill_unique_code ON pipe_mill (unique_code);
 ```
+
+Read them back with the companion GET endpoints. Filter via query parameters or hit the path shortcut:
+
+```bash
+curl "http://localhost:3004/pipe-mill?unique_code=P-4FKD"
+curl "http://localhost:3004/pipe-mill/P-4FKD"
+```
+
+Omit query parameters to list the most recent submissions first.
 
 ### Laddle Checklist payload
 
@@ -238,25 +306,29 @@ curl -X POST http://localhost:3004/laddle-checklist \
 CREATE TABLE IF NOT EXISTS laddle_checklist (
     id SERIAL PRIMARY KEY,
     sample_timestamp TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    laddle_number INTEGER,
-    sample_date DATE,
-    slag_cleaning_top TEXT,
-    slag_cleaning_bottom TEXT,
-    nozzle_proper_lancing TEXT,
-    pursing_plug_cleaning TEXT,
-    sly_gate_check TEXT,
-    nozzle_check_cleaning TEXT,
-    sly_gate_operate TEXT,
-    nfc_proper_heat TEXT,
-    nfc_filling_nozzle TEXT,
+    sample_date DATE NOT NULL,
+    laddle_number INTEGER NOT NULL,
+    slag_cleaning_top VARCHAR(50),
+    slag_cleaning_bottom VARCHAR(50),
+    nozzle_proper_lancing VARCHAR(50),
+    pursing_plug_cleaning VARCHAR(50),
+    sly_gate_check VARCHAR(50),
+    nozzle_check_cleaning VARCHAR(50),
+    sly_gate_operate VARCHAR(50),
+    nfc_proper_heat VARCHAR(50),
+    nfc_filling_nozzle VARCHAR(50),
     plate_life INTEGER,
-    timber_man_name TEXT,
-    laddle_man_name TEXT,
-    laddle_foreman_name TEXT,
-    supervisor_name TEXT,
-    unique_code TEXT UNIQUE
+    timber_man_name VARCHAR(100),
+    laddle_man_name VARCHAR(100),
+    laddle_foreman_name VARCHAR(100),
+    supervisor_name VARCHAR(100),
+    unique_code VARCHAR(50) NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW()
 );
+CREATE UNIQUE INDEX IF NOT EXISTS idx_laddle_checklist_unique_code ON laddle_checklist (unique_code);
 ```
+
+Retrieve records with `GET /laddle-checklist?unique_code=C-1ABC` or `GET /laddle-checklist/C-1ABC`; omit the filters to list every entry ordered by the latest timestamp.
 
 ### Tundish Checklist payload
 
@@ -340,31 +412,35 @@ curl -X POST http://localhost:3004/laddle-return \
       }'
 ```
 
-Send `multipart/form-data` when you need the backend to host the `poring_temperature_photo`, `ccm_temp_before_pursing_photo`, or `ccm_temp_after_pursing_photo` files; each field accepts a single image and the API responds with its `/uploads/...` URL. When using JSON, provide already-hosted URLs for the CCM photos (required) and optionally for `poring_temperature_photo` (omit or send empty to store `NULL`). `laddle_return_date` accepts both `YYYY-MM-DD` and `DD/MM/YYYY`. Each record receives a unique `L-XXXX` code generated from uppercase letters and digits 1-9 (zero excluded). Table definition:
+Send `multipart/form-data` when you need the backend to host the `poring_temperature_photo`, `ccm_temp_before_pursing_photo`, or `ccm_temp_after_pursing_photo` files; each field accepts a single image and the API responds with its `/uploads/...` URL. When using JSON, provide already-hosted URLs for these photos (omit or send empty for any field to store `NULL`). `laddle_return_time` accepts either `HH:MM[:SS]` or `HH:MM[:SS] AM/PM`, and both `poring_temperature` and `ccm_temperature_before_pursing` can be free-form strings such as `1480C` or `1520`. `laddle_return_date` handles either `YYYY-MM-DD` or `DD/MM/YYYY`. Each record receives a unique `L-XXXX` code generated from uppercase letters and digits 1-9 (zero excluded). Table definition:
 
 ```sql
 CREATE TABLE IF NOT EXISTS laddle_return (
     id SERIAL PRIMARY KEY,
     sample_timestamp TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     laddle_return_date DATE NOT NULL,
-    laddle_return_time TEXT NOT NULL,
-    poring_temperature TEXT NOT NULL,
-    poring_temperature_photo TEXT NOT NULL,
-    furnace_shift_incharge TEXT NOT NULL,
-    furnace_crane_driver TEXT NOT NULL,
-    ccm_temperature_before_pursing TEXT NOT NULL,
-    ccm_temp_before_pursing_photo TEXT NOT NULL,
-    ccm_temp_after_pursing_photo TEXT NOT NULL,
-    ccm_crane_driver TEXT NOT NULL,
-    stand1_mould_operator TEXT NOT NULL,
-    stand2_mould_operator TEXT NOT NULL,
-    shift_incharge TEXT NOT NULL,
-    timber_man TEXT NOT NULL,
-    operation_incharge TEXT NOT NULL,
-    laddle_return_reason TEXT NOT NULL,
-    unique_code TEXT UNIQUE
+    laddle_return_time TIME NOT NULL,
+    poring_temperature VARCHAR(100),
+    poring_temperature_photo TEXT,
+    furnace_shift_incharge VARCHAR(100),
+    furnace_crane_driver VARCHAR(100),
+    ccm_temperature_before_pursing VARCHAR(100),
+    ccm_temp_before_pursing_photo TEXT,
+    ccm_temp_after_pursing_photo TEXT,
+    ccm_crane_driver VARCHAR(100),
+    stand1_mould_operator VARCHAR(100),
+    stand2_mould_operator VARCHAR(100),
+    shift_incharge VARCHAR(100),
+    timber_man VARCHAR(100),
+    operation_incharge VARCHAR(100),
+    laddle_return_reason TEXT,
+    unique_code VARCHAR(20) NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW()
 );
+CREATE UNIQUE INDEX IF NOT EXISTS idx_laddle_return_unique_code ON laddle_return (unique_code);
 ```
+
+Read them back with `GET /laddle-return?unique_code=L-R7PF` or the shortcut `GET /laddle-return/L-R7PF`. Omit filters to review all entries ordered by the latest timestamps.
 
 ## Database configuration
 

@@ -17,9 +17,9 @@ const generateCode = () => {
 
 const createSample = async (payload) => {
   for (let attempt = 0; attempt < MAX_GENERATION_ATTEMPTS; attempt += 1) {
-    const code = generateCode();
+    const uniqueCode = generateCode();
     try {
-      return await qcLabSamplesRepository.insertSample({ ...payload, code });
+      return await qcLabSamplesRepository.insertSample({ ...payload, unique_code: uniqueCode });
     } catch (error) {
       if (error?.code === '23505') {
         continue;
@@ -31,5 +31,11 @@ const createSample = async (payload) => {
   throw new Error('Unable to generate a unique QC code after multiple attempts');
 };
 
+const listSamples = async (filters = {}) => qcLabSamplesRepository.findSamples(filters);
 
-module.exports = { createSample };
+const getSampleByUniqueCode = async (uniqueCode) => {
+  const [sample] = await qcLabSamplesRepository.findSamples({ uniqueCode });
+  return sample ?? null;
+};
+
+module.exports = { createSample, listSamples, getSampleByUniqueCode };

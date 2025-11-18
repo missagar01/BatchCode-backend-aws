@@ -56,36 +56,71 @@ const trimmedString = (field, max = 255) =>
     .max(max)
     .transform((value) => value.trim());
 
-const optionalString = z
+const optionalString = (field, max = 255) =>
+  z
+    .union([z.string(), z.null()])
+    .optional()
+    .transform((value) => {
+      if (value === undefined || value === null) {
+        return null;
+      }
+      const trimmed = value.trim();
+      return trimmed.length === 0 ? null : trimmed;
+    })
+    .refine((value) => value === null || value.length <= max, `${field} must be at most ${max} characters`);
+
+const timeField = z
   .string()
-  .optional()
+  .min(1, 'laddle_return_time is required')
+  .transform((value) => value.trim())
   .transform((value) => {
-    if (value === undefined || value === null) {
-      return null;
+    const ampmMatch = value.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(AM|PM)$/i);
+    if (ampmMatch) {
+      let [, hours, minutes, seconds, period] = ampmMatch;
+      let h = Number(hours);
+      const m = Number(minutes);
+      const s = Number(seconds ?? '0');
+      if (h === 12) {
+        h = period.toUpperCase() === 'AM' ? 0 : 12;
+      } else if (period.toUpperCase() === 'PM') {
+        h += 12;
+      }
+      return { h, m, s };
     }
-    const trimmed = value.trim();
-    return trimmed.length === 0 ? null : trimmed;
+    const match = value.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
+    if (!match) {
+      throw new Error('laddle_return_time must be HH:MM or HH:MM:SS');
+    }
+    const [, hours, minutes, seconds] = match;
+    return { h: Number(hours), m: Number(minutes), s: Number(seconds ?? '0') };
+  })
+  .transform(({ h, m, s }) => {
+    if (h > 23 || m > 59 || s > 59) {
+      throw new Error('laddle_return_time must be a valid time');
+    }
+    const pad = (num) => num.toString().padStart(2, '0');
+    return `${pad(h)}:${pad(m)}:${pad(s)}`;
   });
 
 const createLaddleReturnSchema = {
   body: z.object({
     sample_timestamp: timestampField,
     laddle_return_date: dateOnlyField,
-    laddle_return_time: trimmedString('laddle_return_time'),
-    poring_temperature: trimmedString('poring_temperature'),
-    poring_temperature_photo: optionalString,
-    furnace_shift_incharge: trimmedString('furnace_shift_incharge'),
-    furnace_crane_driver: trimmedString('furnace_crane_driver'),
-    ccm_temperature_before_pursing: trimmedString('ccm_temperature_before_pursing'),
-    ccm_temp_before_pursing_photo: trimmedString('ccm_temp_before_pursing_photo'),
-    ccm_temp_after_pursing_photo: trimmedString('ccm_temp_after_pursing_photo'),
-    ccm_crane_driver: trimmedString('ccm_crane_driver'),
-    stand1_mould_operator: trimmedString('stand1_mould_operator'),
-    stand2_mould_operator: trimmedString('stand2_mould_operator'),
-    shift_incharge: trimmedString('shift_incharge'),
-    timber_man: trimmedString('timber_man'),
-    operation_incharge: trimmedString('operation_incharge'),
-    laddle_return_reason: trimmedString('laddle_return_reason')
+    laddle_return_time: timeField,
+    poring_temperature: optionalString('poring_temperature', 100),
+    poring_temperature_photo: optionalString('poring_temperature_photo', 2048),
+    furnace_shift_incharge: optionalString('furnace_shift_incharge', 100),
+    furnace_crane_driver: optionalString('furnace_crane_driver', 100),
+    ccm_temperature_before_pursing: optionalString('ccm_temperature_before_pursing', 100),
+    ccm_temp_before_pursing_photo: optionalString('ccm_temp_before_pursing_photo', 2048),
+    ccm_temp_after_pursing_photo: optionalString('ccm_temp_after_pursing_photo', 2048),
+    ccm_crane_driver: optionalString('ccm_crane_driver', 100),
+    stand1_mould_operator: optionalString('stand1_mould_operator', 100),
+    stand2_mould_operator: optionalString('stand2_mould_operator', 100),
+    shift_incharge: optionalString('shift_incharge', 100),
+    timber_man: optionalString('timber_man', 100),
+    operation_incharge: optionalString('operation_incharge', 100),
+    laddle_return_reason: optionalString('laddle_return_reason', 2000)
   })
 };
 

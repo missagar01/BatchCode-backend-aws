@@ -8,8 +8,9 @@ const insertSmsRegister = async (payload) => {
     sms_head,
     furnace_number,
     remarks = null,
+    picture = null,
     shift_incharge,
-    temprature,
+    temperature,
     unique_code
   } = payload;
 
@@ -21,11 +22,12 @@ const insertSmsRegister = async (payload) => {
       sms_head,
       furnace_number,
       remarks,
+      picture,
       shift_incharge,
-      temprature,
+      temperature,
       unique_code
     )
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
     RETURNING *
   `;
 
@@ -36,8 +38,9 @@ const insertSmsRegister = async (payload) => {
     sms_head,
     furnace_number,
     remarks,
+    picture,
     shift_incharge,
-    temprature ?? null,
+    temperature ?? null,
     unique_code
   ];
 
@@ -45,4 +48,33 @@ const insertSmsRegister = async (payload) => {
   return rows[0];
 };
 
-module.exports = { insertSmsRegister };
+const findSmsRegisters = async ({ id, uniqueCode } = {}) => {
+  const filters = [];
+  const values = [];
+
+  if (typeof id === 'number') {
+    values.push(id);
+    filters.push(`id = $${values.length}`);
+  }
+
+  if (typeof uniqueCode === 'string') {
+    values.push(uniqueCode);
+    filters.push(`unique_code = $${values.length}`);
+  }
+
+  let query = `
+    SELECT *
+    FROM sms_register
+  `;
+
+  if (filters.length > 0) {
+    query += ` WHERE ${filters.join(' OR ')}`;
+  }
+
+  query += ' ORDER BY sample_timestamp DESC NULLS LAST, id DESC';
+
+  const { rows } = await getPool().query(query, values);
+  return rows;
+};
+
+module.exports = { insertSmsRegister, findSmsRegisters };

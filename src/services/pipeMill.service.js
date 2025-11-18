@@ -31,4 +31,11 @@ const createPipeMill = async (payload) => {
   throw new Error('Unable to generate a unique Pipe Mill code after multiple attempts');
 };
 
-module.exports = { createPipeMill };
+const listPipeMillEntries = async (filters = {}) => pipeMillRepository.findPipeMillEntries(filters);
+
+const getPipeMillByUniqueCode = async (uniqueCode) => {
+  const [entry] = await pipeMillRepository.findPipeMillEntries({ uniqueCode });
+  return entry ?? null;
+};
+
+module.exports = { createPipeMill, listPipeMillEntries, getPipeMillByUniqueCode };

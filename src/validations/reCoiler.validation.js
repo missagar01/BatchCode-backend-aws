@@ -23,16 +23,29 @@ const trimmedString = (field, max = 255) =>
     .max(max)
     .transform((value) => value.trim());
 
+const optionalStringField = (field, max = 255) =>
+  z
+    .union([z.string(), z.null()])
+    .optional()
+    .transform((value) => {
+      if (value === undefined || value === null) {
+        return null;
+      }
+      const trimmed = value.trim();
+      return trimmed.length === 0 ? null : trimmed;
+    })
+    .refine((value) => value === null || value.length <= max, `${field} must be at most ${max} characters`);
+
 const createReCoilerSchema = {
   body: z.object({
     sample_timestamp: timestampField,
-    hot_coiler_short_code: trimmedString('hot_coiler_short_code'),
-    size: trimmedString('size'),
-    supervisor: trimmedString('supervisor'),
-    incharge: trimmedString('incharge'),
-    contractor: trimmedString('contractor'),
-    machine_number: trimmedString('machine_number'),
-    welder_name: trimmedString('welder_name')
+    hot_coiler_short_code: trimmedString('hot_coiler_short_code', 50),
+    size: optionalStringField('size', 50),
+    supervisor: optionalStringField('supervisor', 100),
+    incharge: optionalStringField('incharge', 100),
+    contractor: optionalStringField('contractor', 100),
+    machine_number: optionalStringField('machine_number', 50),
+    welder_name: optionalStringField('welder_name', 100)
   })
 };
 

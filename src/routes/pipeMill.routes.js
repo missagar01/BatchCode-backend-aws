@@ -11,6 +11,11 @@ const handlePictureUpload = createFileUploadMiddleware({
   subDirectory: 'pipe-mill-pictures'
 });
 
-router.post('/pipe-mill', handlePictureUpload, validateRequest(createPipeMillSchema), pipeMillController.createEntry);
+router
+  .route('/pipe-mill')
+  .post(handlePictureUpload, validateRequest(createPipeMillSchema), pipeMillController.createEntry)
+  .get(pipeMillController.listEntries);
+
+router.get('/pipe-mill/:unique_code', pipeMillController.getEntryByUniqueCode);
 
 module.exports = router;

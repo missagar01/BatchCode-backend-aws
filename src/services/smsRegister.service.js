@@ -31,4 +31,6 @@ const createSmsRegister = async (payload) => {
   throw new Error('Unable to generate a unique SMS register code after multiple attempts');
 };
 
-module.exports = { createSmsRegister };
+const listSmsRegisters = async (filters = {}) => smsRegisterRepository.findSmsRegisters(filters);
+
+module.exports = { createSmsRegister, listSmsRegisters };

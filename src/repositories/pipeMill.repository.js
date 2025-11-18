@@ -5,15 +5,15 @@ const insertPipeMill = async (payload) => {
     sample_timestamp,
     recoiler_short_code,
     mill_number,
-    section,
-    item_type,
+    section = null,
+    item_type = null,
     quality_supervisor,
     mill_incharge,
     forman_name,
     fitter_name,
     shift,
     size,
-    thickness,
+    thickness = null,
     remarks = null,
     picture = null,
     unique_code
@@ -67,4 +67,33 @@ const insertPipeMill = async (payload) => {
   return rows[0];
 };
 
-module.exports = { insertPipeMill };
+const findPipeMillEntries = async ({ id, uniqueCode } = {}) => {
+  const filters = [];
+  const values = [];
+
+  if (typeof id === 'number') {
+    values.push(id);
+    filters.push(`id = $${values.length}`);
+  }
+
+  if (typeof uniqueCode === 'string') {
+    values.push(uniqueCode);
+    filters.push(`unique_code = $${values.length}`);
+  }
+
+  let query = `
+    SELECT *
+    FROM pipe_mill
+  `;
+
+  if (filters.length) {
+    query += ` WHERE ${filters.join(' OR ')}`;
+  }
+
+  query += ' ORDER BY sample_timestamp DESC NULLS LAST, id DESC';
+
+  const { rows } = await getPool().query(query, values);
+  return rows;
+};
+
+module.exports = { insertPipeMill, findPipeMillEntries };

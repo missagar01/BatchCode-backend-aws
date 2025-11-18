@@ -5,10 +5,11 @@ const { createLaddleChecklistSchema } = require('../validations/laddleChecklist.
 
 const router = Router();
 
-router.post(
-  '/laddle-checklist',
-  validateRequest(createLaddleChecklistSchema),
-  laddleChecklistController.createEntry
-);
+router
+  .route('/laddle-checklist')
+  .post(validateRequest(createLaddleChecklistSchema), laddleChecklistController.createEntry)
+  .get(laddleChecklistController.listEntries);
+
+router.get('/laddle-checklist/:unique_code', laddleChecklistController.getEntryByUniqueCode);
 
 module.exports = router;

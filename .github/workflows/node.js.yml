@@ -1,45 +1,68 @@
-# This workflow will do a clean installation of node dependencies, cache/restore them, build the source code and run tests across different versions of node
-# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-nodejs
-
-name: Node.js CI
+name: 🚀 Node.js CI & Deploy to EC2
 
 on:
   push:
     branches: [ "master" ]
-  pull_request:
-    branches: [ "master" ]
+  workflow_dispatch:
 
 jobs:
-  build:
-
-    runs-on: ubuntu-latest
-
-    strategy:
-      matrix:
-        node-version: [20.x]
-        # See supported Node.js release schedule at https://nodejs.org/en/about/releases/
+  deploy:
+    runs-on: self-hosted
 
     steps:
-    - uses: actions/checkout@v4
-    - name: Use Node.js ${{ matrix.node-version }}
-      uses: actions/setup-node@v4
-      with:
-        node-version: ${{ matrix.node-version }}
-        cache: 'npm'
-    - run: npm ci
-    - run: npm run lint
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
 
-    - name: Deploy to AWS EC2 (PM2)
-      if: github.ref == 'refs/heads/master'
-      uses: appleboy/ssh-action@v0.1.10
-      with:
-        host: ${{ secrets.AWS_HOST }}
-        username: ${{ secrets.AWS_USER }}
-        key: ${{ secrets.AWS_SSH_KEY }}
-        port: ${{ secrets.AWS_SSH_PORT || 22 }}
-        script: |
-          cd ~/BatchCode-backend-aws
-          git fetch --all
-          git reset --hard origin/master
-          npm ci --omit=dev
-          pm2 restart batchcode-backend --update-env
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: 📦 Install dependencies
+        run: npm ci 
+
+      - name: 🧪 Build (if script exists)
+        run: |
+          if node -e "const pkg=require('./package.json'); if (pkg.scripts && pkg.scripts.build) process.exit(0); process.exit(1);" ; then
+            npm run build
+          else
+            echo "No build script. Skipping."
+          fi
+
+      - name: 🚀 Deploy with PM2
+        shell: bash
+        run: |
+          set -e
+
+          # Ensure PM2 present
+          if ! command -v pm2 >/dev/null 2>&1; then
+            sudo npm i -g pm2
+          fi
+
+          APP_NAME="backend"
+          APP_CWD="$(pwd)"
+
+          # Reload existing process or start fresh via npm start (ensures env + scripts stay in sync)
+          if pm2 describe "${APP_NAME}" >/dev/null 2>&1; then
+            pm2 reload "${APP_NAME}" --update-env
+          else
+            pm2 start npm --name "${APP_NAME}" -- start --cwd "${APP_CWD}"
+          fi
+
+          # Save current process list (non-fatal if unchanged)
+          pm2 save || true
+
+          # --- FIRST-RUN ONLY (make pm2 boot on reboot) ---
+          # Try to detect existing systemd unit to avoid failing every run
+          if ! systemctl status pm2-ubuntu >/dev/null 2>&1; then
+            # Build a PATH that includes the Actions Node toolchain
+            NODE_BIN_DIR="$(dirname "$(which node)")"
+            # Use sudo + PATH as pm2 suggests; don't fail the job if it prints guidance
+            sudo env PATH="$PATH:$NODE_BIN_DIR" pm2 startup systemd -u ubuntu --hp /home/ubuntu || true
+            # Enable service if just created
+            sudo systemctl enable pm2-ubuntu || true
+          fi
+
+          # Show status for debugging
+          pm2 status

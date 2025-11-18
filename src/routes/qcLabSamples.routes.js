@@ -6,16 +6,18 @@ const { createSampleSchema } = require('../validations/qcLabSamples.validation')
 
 const router = Router();
 
-const handleTestReportUpload = createFileUploadMiddleware({
-  fieldName: 'test_report_picture',
-  subDirectory: 'qc-test-report-pictures'
+const handleReportUpload = createFileUploadMiddleware({
+  fieldName: 'report_picture',
+  subDirectory: 'qc-report-pictures'
 });
 
-router.post(
-  '/qc-lab-samples',
-  handleTestReportUpload,
-  validateRequest(createSampleSchema),
-  qcLabSamplesController.createSample
-);
+router
+  .route('/qc-lab-samples')
+  .post(handleReportUpload, validateRequest(createSampleSchema), qcLabSamplesController.createSample)
+  .get(qcLabSamplesController.listSamples);
+
+router.get('/qc-lab-samples/:unique_code', qcLabSamplesController.getSampleByUniqueCode);
 
 module.exports = router;
+
+

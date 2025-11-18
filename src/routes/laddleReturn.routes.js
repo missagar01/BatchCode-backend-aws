@@ -14,11 +14,11 @@ const handleUploads = createFileUploadMiddleware({
   ]
 });
 
-router.post(
-  '/laddle-return',
-  handleUploads,
-  validateRequest(createLaddleReturnSchema),
-  laddleReturnController.createEntry
-);
+router
+  .route('/laddle-return')
+  .post(handleUploads, validateRequest(createLaddleReturnSchema), laddleReturnController.createEntry)
+  .get(laddleReturnController.listEntries);
+
+router.get('/laddle-return/:unique_code', laddleReturnController.getEntryByUniqueCode);
 
 module.exports = router;

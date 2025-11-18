@@ -30,7 +30,7 @@ const optionalString = z
 const createSmsRegisterSchema = {
   body: z.object({
     sample_timestamp: timestampField,
-    sequence_number: z.string().min(1, 'sequence_number is required').max(255),
+    sequence_number: z.string().min(1, 'sequence_number is required').max(10),
     laddle_number: z
       .union([z.number(), z.string()])
       .optional()
@@ -47,11 +47,12 @@ const createSmsRegisterSchema = {
         }
         return typeof value === 'number' ? value : Number(value);
       }),
-    sms_head: z.string().min(1, 'sms_head is required').max(255),
-    furnace_number: z.string().min(1, 'furnace_number is required').max(255),
+    sms_head: z.string().min(1, 'sms_head is required').max(150),
+    furnace_number: z.string().min(1, 'furnace_number is required').max(50),
     remarks: optionalString,
-    shift_incharge: z.string().min(1, 'shift_incharge is required').max(255),
-    temprature: z
+    picture: optionalString,
+    shift_incharge: z.string().min(1, 'shift_incharge is required').max(100),
+    temperature: z
       .union([z.number(), z.string()])
       .optional()
       .refine((value) => {
@@ -60,7 +61,7 @@ const createSmsRegisterSchema = {
         }
         const numericValue = typeof value === 'number' ? value : Number(value);
         return Number.isInteger(numericValue);
-      }, 'temprature must be an integer')
+      }, 'temperature must be an integer')
       .transform((value) => {
         if (value === undefined || value === null || value === '') {
           return null;

@@ -5,6 +5,11 @@ const { createReCoilerSchema } = require('../validations/reCoiler.validation');
 
 const router = Router();
 
-router.post('/re-coiler', validateRequest(createReCoilerSchema), reCoilerController.createEntry);
+router
+  .route('/re-coiler')
+  .post(validateRequest(createReCoilerSchema), reCoilerController.createEntry)
+  .get(reCoilerController.listEntries);
+
+router.get('/re-coiler/:unique_code', reCoilerController.getEntryByUniqueCode);
 
 module.exports = router;

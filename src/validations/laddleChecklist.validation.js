@@ -49,12 +49,18 @@ const dateOnlyField = z
   }, z.date({ invalid_type_error: 'sample_date must be a valid date' }))
   .transform((value) => value.toISOString().split('T')[0]);
 
-const trimmedString = (field, max = 255) =>
+const optionalTrimmedString = (field, max = 255) =>
   z
-    .string()
-    .min(1, `${field} is required`)
-    .max(max)
-    .transform((value) => value.trim());
+    .union([z.string(), z.null()])
+    .optional()
+    .transform((value) => {
+      if (value === undefined || value === null) {
+        return null;
+      }
+      const trimmed = value.trim();
+      return trimmed.length === 0 ? null : trimmed;
+    })
+    .refine((value) => value === null || value.length <= max, `${field} must be at most ${max} characters`);
 
 const createLaddleChecklistSchema = {
   body: z.object({
@@ -70,15 +76,15 @@ const createLaddleChecklistSchema = {
       }, 'laddle_number must be an integer')
       .transform((value) => (typeof value === 'number' ? value : Number(value))),
     sample_date: dateOnlyField,
-    slag_cleaning_top: trimmedString('slag_cleaning_top'),
-    slag_cleaning_bottom: trimmedString('slag_cleaning_bottom'),
-    nozzle_proper_lancing: trimmedString('nozzle_proper_lancing'),
-    pursing_plug_cleaning: trimmedString('pursing_plug_cleaning'),
-    sly_gate_check: trimmedString('sly_gate_check'),
-    nozzle_check_cleaning: trimmedString('nozzle_check_cleaning'),
-    sly_gate_operate: trimmedString('sly_gate_operate'),
-    nfc_proper_heat: trimmedString('nfc_proper_heat'),
-    nfc_filling_nozzle: trimmedString('nfc_filling_nozzle'),
+    slag_cleaning_top: optionalTrimmedString('slag_cleaning_top', 50),
+    slag_cleaning_bottom: optionalTrimmedString('slag_cleaning_bottom', 50),
+    nozzle_proper_lancing: optionalTrimmedString('nozzle_proper_lancing', 50),
+    pursing_plug_cleaning: optionalTrimmedString('pursing_plug_cleaning', 50),
+    sly_gate_check: optionalTrimmedString('sly_gate_check', 50),
+    nozzle_check_cleaning: optionalTrimmedString('nozzle_check_cleaning', 50),
+    sly_gate_operate: optionalTrimmedString('sly_gate_operate', 50),
+    nfc_proper_heat: optionalTrimmedString('nfc_proper_heat', 50),
+    nfc_filling_nozzle: optionalTrimmedString('nfc_filling_nozzle', 50),
     plate_life: z
       .union([z.number(), z.string()])
       .optional()
@@ -95,10 +101,10 @@ const createLaddleChecklistSchema = {
         }
         return typeof value === 'number' ? value : Number(value);
       }),
-    timber_man_name: trimmedString('timber_man_name'),
-    laddle_man_name: trimmedString('laddle_man_name'),
-    laddle_foreman_name: trimmedString('laddle_foreman_name'),
-    supervisor_name: trimmedString('supervisor_name')
+    timber_man_name: optionalTrimmedString('timber_man_name', 100),
+    laddle_man_name: optionalTrimmedString('laddle_man_name', 100),
+    laddle_foreman_name: optionalTrimmedString('laddle_foreman_name', 100),
+    supervisor_name: optionalTrimmedString('supervisor_name', 100)
   })
 };
 

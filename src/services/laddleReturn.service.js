@@ -31,4 +31,11 @@ const createLaddleReturn = async (payload) => {
   throw new Error('Unable to generate a unique Laddle Return code after multiple attempts');
 };
 
-module.exports = { createLaddleReturn };
+const listLaddleReturns = async (filters = {}) => laddleReturnRepository.findLaddleReturns(filters);
+
+const getLaddleReturnByUniqueCode = async (uniqueCode) => {
+  const [entry] = await laddleReturnRepository.findLaddleReturns({ uniqueCode });
+  return entry ?? null;
+};
+
+module.exports = { createLaddleReturn, listLaddleReturns, getLaddleReturnByUniqueCode };

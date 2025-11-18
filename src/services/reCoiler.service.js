@@ -31,4 +31,11 @@ const createReCoiler = async (payload) => {
   throw new Error('Unable to generate a unique Re-Coiler code after multiple attempts');
 };
 
-module.exports = { createReCoiler };
+const listReCoilerEntries = async (filters = {}) => reCoilerRepository.findReCoilerEntries(filters);
+
+const getReCoilerByUniqueCode = async (uniqueCode) => {
+  const [entry] = await reCoilerRepository.findReCoilerEntries({ uniqueCode });
+  return entry ?? null;
+};
+
+module.exports = { createReCoiler, listReCoilerEntries, getReCoilerByUniqueCode };

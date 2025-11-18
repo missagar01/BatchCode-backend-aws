@@ -31,4 +31,11 @@ const createLaddleChecklist = async (payload) => {
   throw new Error('Unable to generate a unique Laddle Checklist code after multiple attempts');
 };
 
-module.exports = { createLaddleChecklist };
+const listLaddleChecklists = async (filters = {}) => laddleChecklistRepository.findLaddleChecklists(filters);
+
+const getLaddleChecklistByUniqueCode = async (uniqueCode) => {
+  const [entry] = await laddleChecklistRepository.findLaddleChecklists({ uniqueCode });
+  return entry ?? null;
+};
+
+module.exports = { createLaddleChecklist, listLaddleChecklists, getLaddleChecklistByUniqueCode };
