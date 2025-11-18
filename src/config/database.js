@@ -53,6 +53,18 @@ const ensureQcLabSamplesTable = async () => {
     )
   `;
   await pool.query(ddl);
+  await pool.query(`
+    DO $$
+    BEGIN
+      IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'qc_lab_samples' AND column_name = 'code'
+      ) THEN
+        ALTER TABLE qc_lab_samples RENAME COLUMN code TO unique_code;
+      END IF;
+    END $$;
+  `);
+  await pool.query('ALTER TABLE qc_lab_samples ADD COLUMN IF NOT EXISTS unique_code VARCHAR(50)');
   await pool.query('CREATE UNIQUE INDEX IF NOT EXISTS idx_qc_lab_samples_unique_code ON qc_lab_samples (unique_code)');
   logger.info('Ensured qc_lab_samples table and unique code index exist');
 };
