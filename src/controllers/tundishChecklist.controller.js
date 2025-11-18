@@ -49,5 +49,7 @@ const getEntryByUniqueCode = async (req, res) => {
   res.status(StatusCodes.OK).json(buildResponse('Tundish checklist entry fetched', entry));
 };
 
+
+
 module.exports = { createEntry, listEntries, getEntryByUniqueCode };
 
