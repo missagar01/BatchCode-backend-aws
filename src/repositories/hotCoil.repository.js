@@ -57,4 +57,33 @@ const insertHotCoil = async (payload) => {
   return rows[0];
 };
 
-module.exports = { insertHotCoil };
+const findHotCoilEntries = async ({ id, uniqueCode } = {}) => {
+  const filters = [];
+  const values = [];
+
+  if (typeof id === 'number') {
+    values.push(id);
+    filters.push(`id = $${values.length}`);
+  }
+
+  if (typeof uniqueCode === 'string') {
+    values.push(uniqueCode);
+    filters.push(`unique_code = $${values.length}`);
+  }
+
+  let query = `
+    SELECT *
+    FROM hot_coil
+  `;
+
+  if (filters.length) {
+    query += ` WHERE ${filters.join(' OR ')}`;
+  }
+
+  query += ' ORDER BY sample_timestamp DESC NULLS LAST, id DESC';
+
+  const { rows } = await getPool().query(query, values);
+  return rows;
+};
+
+module.exports = { insertHotCoil, findHotCoilEntries };

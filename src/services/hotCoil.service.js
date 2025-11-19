@@ -31,4 +31,11 @@ const createHotCoil = async (payload) => {
   throw new Error('Unable to generate a unique Hot Coil code after multiple attempts');
 };
 
-module.exports = { createHotCoil };
+const listHotCoilEntries = async (filters = {}) => hotCoilRepository.findHotCoilEntries(filters);
+
+const getHotCoilByUniqueCode = async (uniqueCode) => {
+  const [entry] = await hotCoilRepository.findHotCoilEntries({ uniqueCode });
+  return entry ?? null;
+};
+
+module.exports = { createHotCoil, listHotCoilEntries, getHotCoilByUniqueCode };
