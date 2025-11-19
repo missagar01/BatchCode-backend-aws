@@ -27,6 +27,24 @@ const optionalString = z
     return trimmed.length === 0 ? null : trimmed;
   });
 
+const temperatureField = z
+  .union([z.string(), z.number(), z.null()])
+  .optional()
+  .transform((value) => {
+    if (value === undefined || value === null) {
+      return null;
+    }
+    if (typeof value === 'number') {
+      return value.toString();
+    }
+    const trimmed = value.trim();
+    return trimmed.length === 0 ? null : trimmed;
+  })
+  .refine(
+    (value) => value === null || value.length <= 50,
+    'temperature must be 50 characters or fewer'
+  );
+
 const createSmsRegisterSchema = {
   body: z.object({
     sample_timestamp: timestampField,
@@ -52,22 +70,7 @@ const createSmsRegisterSchema = {
     remarks: optionalString,
     picture: optionalString,
     shift_incharge: z.string().min(1, 'shift_incharge is required').max(100),
-    temperature: z
-      .union([z.number(), z.string()])
-      .optional()
-      .refine((value) => {
-        if (value === undefined || value === null || value === '') {
-          return true;
-        }
-        const numericValue = typeof value === 'number' ? value : Number(value);
-        return Number.isInteger(numericValue);
-      }, 'temperature must be an integer')
-      .transform((value) => {
-        if (value === undefined || value === null || value === '') {
-          return null;
-        }
-        return typeof value === 'number' ? value : Number(value);
-      })
+    temperature: temperatureField
   })
 };
 
