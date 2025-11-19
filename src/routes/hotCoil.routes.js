@@ -11,6 +11,11 @@ const handlePictureUpload = createFileUploadMiddleware({
   subDirectory: 'hot-coil-pictures'
 });
 
-router.post('/hot-coil', handlePictureUpload, validateRequest(createHotCoilSchema), hotCoilController.createEntry);
+router
+  .route('/hot-coil')
+  .post(handlePictureUpload, validateRequest(createHotCoilSchema), hotCoilController.createEntry)
+  .get(hotCoilController.listEntries);
+
+router.get('/hot-coil/:unique_code', hotCoilController.getEntryByUniqueCode);
 
 module.exports = router;
