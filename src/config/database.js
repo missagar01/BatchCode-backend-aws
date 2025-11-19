@@ -85,7 +85,7 @@ const ensureSmsRegisterTable = async () => {
       picture TEXT,
 
       shift_incharge VARCHAR(100),
-      temperature INTEGER,
+      temperature VARCHAR(50),
 
       unique_code VARCHAR(50) NOT NULL,
       created_at TIMESTAMPTZ DEFAULT NOW()
@@ -107,6 +107,19 @@ const ensureSmsRegisterTable = async () => {
   await pool.query('ALTER TABLE sms_register ADD COLUMN IF NOT EXISTS picture TEXT');
   await pool.query('ALTER TABLE sms_register ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW()');
   await pool.query('ALTER TABLE sms_register ALTER COLUMN sample_timestamp SET DEFAULT CURRENT_TIMESTAMP');
+  await pool.query(`
+    DO $$
+    BEGIN
+      IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'sms_register' AND column_name = 'temperature'
+      ) THEN
+        ALTER TABLE sms_register ALTER COLUMN temperature TYPE VARCHAR(50) USING temperature::text;
+      ELSE
+        ALTER TABLE sms_register ADD COLUMN temperature VARCHAR(50);
+      END IF;
+    END $$;
+  `);
   logger.info('Ensured sms_register table and unique code index exist');
 };
 

@@ -132,11 +132,11 @@ curl -X POST http://localhost:3004/sms-register \
         "remarks": "Heat looks stable",
         "shift_incharge": "Incharge C",
         "picture": "https://drive.google.com/photo.png",
-        "temperature": 1542
+        "temperature": "1542"
       }'
 ```
 
-Each SMS register row automatically receives a unique code formatted as `S-xxxx` (uppercase alphanumeric characters) and, if `sample_timestamp` is omitted, the server automatically stores the current timestamp. The `picture` field is optional—supply a hosted link (for example, a Google Drive URL) or omit it entirely—and `remarks` can also be left blank.
+Each SMS register row automatically receives a unique code formatted as `S-xxxx` (uppercase alphanumeric characters) and, if `sample_timestamp` is omitted, the server automatically stores the current timestamp. The `picture` field is optional—supply a hosted link (for example, a Google Drive URL) or omit it entirely—and `remarks` can also be left blank. The `temperature` field now stores free-form values up to 50 characters, so you can submit values like `1542`, `1542C`, or narrative notes from the furnace team.
 
 To upload a photo directly instead of a URL, switch Postman to `form-data`, include the same text fields, and attach a file for `picture`. The API stores the file under `/uploads/sms-register-pictures` and rewrites the request body with the final URL before validation, so the rest of the workflow is unchanged.
 
