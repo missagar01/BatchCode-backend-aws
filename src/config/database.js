@@ -219,6 +219,57 @@ const ensureReCoilerTable = async () => {
   logger.info('Ensured re_coiler table and unique code index exist');
 };
 
+const ensureTundishChecklistTable = async () => {
+  const ddl = `
+    CREATE TABLE IF NOT EXISTS tundish_checklist (
+      id SERIAL PRIMARY KEY,
+
+      sample_timestamp TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+      tundish_number INTEGER,
+
+      nozzle_plate_check TEXT,
+      well_block_check TEXT,
+      board_proper_set TEXT,
+      board_sand_filling TEXT,
+      refractory_slag_cleaning TEXT,
+      tundish_mession_name TEXT,
+      handover_proper_check TEXT,
+      handover_nozzle_installed TEXT,
+      handover_masala_inserted TEXT,
+      stand1_mould_operator TEXT,
+      stand2_mould_operator TEXT,
+      timber_man_name TEXT,
+      laddle_operator_name TEXT,
+      shift_incharge_name TEXT,
+      forman_name TEXT,
+      unique_code TEXT
+    )
+  `;
+  await pool.query(ddl);
+  await pool.query('CREATE UNIQUE INDEX IF NOT EXISTS idx_tundish_checklist_unique_code ON tundish_checklist (unique_code)');
+  await pool.query('ALTER TABLE tundish_checklist ALTER COLUMN sample_timestamp SET DEFAULT CURRENT_TIMESTAMP');
+  await pool.query(`
+    DO $$
+    BEGIN
+      IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'tundish_checklist' AND column_name = 'sample_date'
+      ) THEN
+        ALTER TABLE tundish_checklist DROP COLUMN sample_date;
+      END IF;
+
+      IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'tundish_checklist' AND column_name = 'sample_time'
+      ) THEN
+        ALTER TABLE tundish_checklist DROP COLUMN sample_time;
+      END IF;
+    END $$;
+  `);
+  await pool.query('ALTER TABLE tundish_checklist ALTER COLUMN unique_code SET NOT NULL');
+  logger.info('Ensured tundish_checklist table and unique code index exist');
+};
+
 const ensureLaddleChecklistTable = async () => {
   const ddl = `
     CREATE TABLE IF NOT EXISTS laddle_checklist (
@@ -351,6 +402,7 @@ const connectDatabase = async () => {
     await ensureHotCoilTable();
     await ensurePipeMillTable();
     await ensureReCoilerTable();
+    await ensureTundishChecklistTable();
     await ensureLaddleChecklistTable();
     await ensureLaddleReturnTable();
     return pool;

@@ -4,8 +4,6 @@ const insertTundishChecklist = async (payload) => {
   const {
     sample_timestamp,
     tundish_number,
-    sample_date,
-    sample_time,
     nozzle_plate_check,
     well_block_check,
     board_proper_set,
@@ -28,8 +26,6 @@ const insertTundishChecklist = async (payload) => {
     INSERT INTO tundish_checklist (
       sample_timestamp,
       tundish_number,
-      sample_date,
-      sample_time,
       nozzle_plate_check,
       well_block_check,
       board_proper_set,
@@ -51,7 +47,7 @@ const insertTundishChecklist = async (payload) => {
       $1, $2, $3, $4, $5,
       $6, $7, $8, $9, $10,
       $11, $12, $13, $14, $15,
-      $16, $17, $18, $19, $20
+      $16, $17, $18
     )
     RETURNING *
   `;
@@ -59,8 +55,6 @@ const insertTundishChecklist = async (payload) => {
   const values = [
     sample_timestamp ?? null,
     tundish_number ?? null,
-    sample_date ?? null,
-    sample_time,
     nozzle_plate_check,
     well_block_check,
     board_proper_set,

@@ -340,8 +340,6 @@ curl -X POST http://localhost:3004/tundish-checklist \
   -d '{
         "sample_timestamp": "2024-05-21T02:05:00Z",
         "tundish_number": 3,
-        "sample_date": "21/05/2024",
-        "sample_time": "02:05 AM",
         "nozzle_plate_check": "Done",
         "well_block_check": "Done",
         "board_proper_set": "Yes",
@@ -360,15 +358,13 @@ curl -X POST http://localhost:3004/tundish-checklist \
       }'
 ```
 
-`sample_timestamp` is optional and defaults to the current time. `sample_date` accepts either `YYYY-MM-DD` or `DD/MM/YYYY` (or a Date object) and is persisted as a DATE column. All checklist fields are trimmed server-side before storage. Every entry receives a unique `T-XXXX` identifier using uppercase letters and digits 1-9 (zero is excluded). Apply the table definition:
+`sample_timestamp` is optional and defaults to the current time. All checklist fields are trimmed server-side before storage. Every entry receives a unique `T-XXXX` identifier using uppercase letters and digits 1-9 (zero is excluded). Apply the table definition:
 
 ```sql
 CREATE TABLE IF NOT EXISTS tundish_checklist (
     id SERIAL PRIMARY KEY,
     sample_timestamp TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     tundish_number INTEGER,
-    sample_date DATE,
-    sample_time TEXT,
     nozzle_plate_check TEXT,
     well_block_check TEXT,
     board_proper_set TEXT,
@@ -384,7 +380,7 @@ CREATE TABLE IF NOT EXISTS tundish_checklist (
     laddle_operator_name TEXT,
     shift_incharge_name TEXT,
     forman_name TEXT,
-    unique_code TEXT UNIQUE
+    unique_code TEXT NOT NULL UNIQUE
 );
 ```
 
