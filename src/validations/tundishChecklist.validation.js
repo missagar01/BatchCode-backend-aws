@@ -16,39 +16,6 @@ const timestampField = z
   }, z.date({ invalid_type_error: 'sample_timestamp must be a valid date' }))
   .transform((value) => value.toISOString());
 
-const parseDateInput = (value) => {
-  if (value instanceof Date) {
-    return value;
-  }
-  if (typeof value !== 'string') {
-    return value;
-  }
-
-  const trimmed = value.trim();
-  if (trimmed.length === 0) {
-    return value;
-  }
-
-  const slashMatch = trimmed.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-  if (slashMatch) {
-    const [, day, month, year] = slashMatch;
-    const parsedDate = new Date(Date.UTC(Number(year), Number(month) - 1, Number(day)));
-    return Number.isNaN(parsedDate.getTime()) ? value : parsedDate;
-  }
-
-  const date = new Date(trimmed);
-  return Number.isNaN(date.getTime()) ? value : date;
-};
-
-const dateOnlyField = z
-  .preprocess((value) => {
-    if (value === undefined || value === null || value === '') {
-      return value;
-    }
-    return parseDateInput(value);
-  }, z.date({ invalid_type_error: 'sample_date must be a valid date' }))
-  .transform((value) => value.toISOString().split('T')[0]);
-
 const trimmedString = (field, max = 255) =>
   z
     .string()
@@ -69,8 +36,6 @@ const createTundishChecklistSchema = {
         return Number.isInteger(numericValue);
       }, 'tundish_number must be an integer')
       .transform((value) => (typeof value === 'number' ? value : Number(value))),
-    sample_date: dateOnlyField,
-    sample_time: trimmedString('sample_time'),
     nozzle_plate_check: trimmedString('nozzle_plate_check'),
     well_block_check: trimmedString('well_block_check'),
     board_proper_set: trimmedString('board_proper_set'),
