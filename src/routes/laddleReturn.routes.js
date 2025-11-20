@@ -3,6 +3,7 @@ const laddleReturnController = require('../controllers/laddleReturn.controller')
 const validateRequest = require('../middlewares/validateRequest');
 const createFileUploadMiddleware = require('../middlewares/fileUpload');
 const { createLaddleReturnSchema } = require('../validations/laddleReturn.validation');
+const { requireAuth } = require('../middlewares/auth');
 
 const router = Router();
 
@@ -16,9 +17,9 @@ const handleUploads = createFileUploadMiddleware({
 
 router
   .route('/laddle-return')
-  .post(handleUploads, validateRequest(createLaddleReturnSchema), laddleReturnController.createEntry)
-  .get(laddleReturnController.listEntries);
+  .post(requireAuth, handleUploads, validateRequest(createLaddleReturnSchema), laddleReturnController.createEntry)
+  .get(requireAuth, laddleReturnController.listEntries);
 
-router.get('/laddle-return/:unique_code', laddleReturnController.getEntryByUniqueCode);
+router.get('/laddle-return/:unique_code', requireAuth, laddleReturnController.getEntryByUniqueCode);
 
 module.exports = router;

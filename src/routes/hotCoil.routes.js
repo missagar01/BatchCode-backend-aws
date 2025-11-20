@@ -3,6 +3,7 @@ const hotCoilController = require('../controllers/hotCoil.controller');
 const validateRequest = require('../middlewares/validateRequest');
 const createFileUploadMiddleware = require('../middlewares/fileUpload');
 const { createHotCoilSchema } = require('../validations/hotCoil.validation');
+const { requireAuth } = require('../middlewares/auth');
 
 const router = Router();
 
@@ -13,9 +14,9 @@ const handlePictureUpload = createFileUploadMiddleware({
 
 router
   .route('/hot-coil')
-  .post(handlePictureUpload, validateRequest(createHotCoilSchema), hotCoilController.createEntry)
-  .get(hotCoilController.listEntries);
+  .post(requireAuth, handlePictureUpload, validateRequest(createHotCoilSchema), hotCoilController.createEntry)
+  .get(requireAuth, hotCoilController.listEntries);
 
-router.get('/hot-coil/:unique_code', hotCoilController.getEntryByUniqueCode);
+router.get('/hot-coil/:unique_code', requireAuth, hotCoilController.getEntryByUniqueCode);
 
 module.exports = router;

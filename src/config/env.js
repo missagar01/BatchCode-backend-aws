@@ -27,7 +27,21 @@ const envSchema = z.object({
   PG_SSL: z
     .enum(['true', 'false'])
     .default('false')
-    .transform((value) => value === 'true')
+    .transform((value) => value === 'true'),
+  DB_HOST: z.string().optional(),
+  DB_PORT: z
+    .string()
+    .transform((value) => (value ? Number(value) : undefined))
+    .optional(),
+  DB_USER: z.string().optional(),
+  DB_PASSWORD: z.string().optional(),
+  DB_NAME: z.string().optional(),
+  DB_SSL: z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform((value) => value === 'true'),
+  JWT_SECRET: z.string().min(1, 'JWT_SECRET is required'),
+  JWT_EXPIRES_IN: z.string().default('1d')
 });
 
 const parsedEnv = envSchema.parse(process.env);
@@ -39,12 +53,24 @@ const config = {
   logLevel: parsedEnv.LOG_LEVEL,
   corsOrigins: parsedEnv.CORS_ORIGINS?.split(',').map((origin) => origin.trim()).filter(Boolean) ?? ['*'],
   postgres: {
-    host: parsedEnv.PG_HOST,
-    port: parsedEnv.PG_PORT,
-    user: parsedEnv.PG_USER,
-    password: parsedEnv.PG_PASSWORD,
-    database: parsedEnv.PG_DATABASE,
+    host: parsedEnv.PG_HOST ?? parsedEnv.DB_HOST,
+    port: parsedEnv.PG_PORT ?? parsedEnv.DB_PORT ?? 5432,
+    user: parsedEnv.PG_USER ?? parsedEnv.DB_USER,
+    password: parsedEnv.PG_PASSWORD ?? parsedEnv.DB_PASSWORD,
+    database: parsedEnv.PG_DATABASE ?? parsedEnv.DB_NAME,
     ssl: parsedEnv.PG_SSL
+  },
+  authDatabase: {
+    host: parsedEnv.DB_HOST ?? parsedEnv.PG_HOST,
+    port: parsedEnv.DB_PORT ?? parsedEnv.PG_PORT ?? 5432,
+    user: parsedEnv.DB_USER ?? parsedEnv.PG_USER,
+    password: parsedEnv.DB_PASSWORD ?? parsedEnv.PG_PASSWORD,
+    database: parsedEnv.DB_NAME ?? parsedEnv.PG_DATABASE,
+    ssl: parsedEnv.DB_SSL ?? parsedEnv.PG_SSL
+  },
+  jwt: {
+    secret: parsedEnv.JWT_SECRET,
+    expiresIn: parsedEnv.JWT_EXPIRES_IN
   }
 };
 

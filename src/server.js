@@ -2,7 +2,7 @@ const http = require('http');
 const app = require('./app');
 const config = require('./config/env');
 const { logger, configureLogger } = require('./utils/logger');
-const { connectDatabase } = require('./config/database');
+const { connectDatabase, connectAuthDatabase } = require('./config/database');
 
 const server = http.createServer(app);
 
@@ -10,6 +10,7 @@ const start = async () => {
   try {
     configureLogger(config.logLevel);
     await connectDatabase();
+    await connectAuthDatabase();
 
     server.listen(config.port, () => {
       logger.info(`Server listening on port ${config.port}`);

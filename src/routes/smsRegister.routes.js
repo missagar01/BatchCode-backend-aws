@@ -3,7 +3,7 @@ const smsRegisterController = require('../controllers/smsRegister.controller');
 const validateRequest = require('../middlewares/validateRequest');
 const createFileUploadMiddleware = require('../middlewares/fileUpload');
 const { createSmsRegisterSchema } = require('../validations/smsRegister.validation');
-
+const { requireAuth } = require('../middlewares/auth');
 const router = Router();
 
 const handleSmsRegisterPicture = createFileUploadMiddleware({
@@ -13,7 +13,7 @@ const handleSmsRegisterPicture = createFileUploadMiddleware({
 
 router
   .route('/sms-register')
-  .post(handleSmsRegisterPicture, validateRequest(createSmsRegisterSchema), smsRegisterController.createEntry)
-  .get(smsRegisterController.listEntries);
+  .post(requireAuth, handleSmsRegisterPicture, validateRequest(createSmsRegisterSchema), smsRegisterController.createEntry)
+  .get(requireAuth, smsRegisterController.listEntries);
 
 module.exports = router;

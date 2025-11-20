@@ -2,17 +2,18 @@ const { Pool } = require('pg');
 const config = require('./env');
 const { logger } = require('../utils/logger');
 
-let pool;
+let mainPool;
+let authPool;
 
-const buildConnectionOptions = () => {
-  if (config.databaseUrl) {
+const buildConnectionOptions = (databaseConfig) => {
+  if (config.databaseUrl && databaseConfig === config.postgres) {
     return {
       connectionString: config.databaseUrl,
       ssl: config.postgres.ssl ? { rejectUnauthorized: false } : false
     };
   }
 
-  const { host, port, user, password, database, ssl } = config.postgres;
+  const { host, port, user, password, database, ssl } = databaseConfig;
   if (!host || !user || !database) {
     return null;
   }
@@ -52,8 +53,8 @@ const ensureQcLabSamplesTable = async () => {
       created_at TIMESTAMPTZ DEFAULT NOW()
     )
   `;
-  await pool.query(ddl);
-  await pool.query(`
+  await mainPool.query(ddl);
+  await mainPool.query(`
     DO $$
     BEGIN
       IF EXISTS (
@@ -64,8 +65,8 @@ const ensureQcLabSamplesTable = async () => {
       END IF;
     END $$;
   `);
-  await pool.query('ALTER TABLE qc_lab_samples ADD COLUMN IF NOT EXISTS unique_code VARCHAR(50)');
-  await pool.query('CREATE UNIQUE INDEX IF NOT EXISTS idx_qc_lab_samples_unique_code ON qc_lab_samples (unique_code)');
+  await mainPool.query('ALTER TABLE qc_lab_samples ADD COLUMN IF NOT EXISTS unique_code VARCHAR(50)');
+  await mainPool.query('CREATE UNIQUE INDEX IF NOT EXISTS idx_qc_lab_samples_unique_code ON qc_lab_samples (unique_code)');
   logger.info('Ensured qc_lab_samples table and unique code index exist');
 };
 
@@ -91,9 +92,9 @@ const ensureSmsRegisterTable = async () => {
       created_at TIMESTAMPTZ DEFAULT NOW()
     )
   `;
-  await pool.query(ddl);
-  await pool.query('CREATE UNIQUE INDEX IF NOT EXISTS idx_sms_register_unique_code ON sms_register (unique_code)');
-  await pool.query(`
+  await mainPool.query(ddl);
+  await mainPool.query('CREATE UNIQUE INDEX IF NOT EXISTS idx_sms_register_unique_code ON sms_register (unique_code)');
+  await mainPool.query(`
     DO $$
     BEGIN
       IF EXISTS (
@@ -104,10 +105,10 @@ const ensureSmsRegisterTable = async () => {
       END IF;
     END $$;
   `);
-  await pool.query('ALTER TABLE sms_register ADD COLUMN IF NOT EXISTS picture TEXT');
-  await pool.query('ALTER TABLE sms_register ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW()');
-  await pool.query('ALTER TABLE sms_register ALTER COLUMN sample_timestamp SET DEFAULT CURRENT_TIMESTAMP');
-  await pool.query(`
+  await mainPool.query('ALTER TABLE sms_register ADD COLUMN IF NOT EXISTS picture TEXT');
+  await mainPool.query('ALTER TABLE sms_register ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW()');
+  await mainPool.query('ALTER TABLE sms_register ALTER COLUMN sample_timestamp SET DEFAULT CURRENT_TIMESTAMP');
+  await mainPool.query(`
     DO $$
     BEGIN
       IF EXISTS (
@@ -142,10 +143,10 @@ const ensureHotCoilTable = async () => {
       unique_code TEXT
     )
   `;
-  await pool.query(ddl);
-  await pool.query('CREATE UNIQUE INDEX IF NOT EXISTS idx_hot_coil_unique_code ON hot_coil (unique_code)');
-  await pool.query('ALTER TABLE hot_coil ADD COLUMN IF NOT EXISTS submission_type TEXT');
-  await pool.query('ALTER TABLE hot_coil ADD COLUMN IF NOT EXISTS picture TEXT');
+  await mainPool.query(ddl);
+  await mainPool.query('CREATE UNIQUE INDEX IF NOT EXISTS idx_hot_coil_unique_code ON hot_coil (unique_code)');
+  await mainPool.query('ALTER TABLE hot_coil ADD COLUMN IF NOT EXISTS submission_type TEXT');
+  await mainPool.query('ALTER TABLE hot_coil ADD COLUMN IF NOT EXISTS picture TEXT');
   logger.info('Ensured hot_coil table and unique code index exist');
 };
 
@@ -176,14 +177,14 @@ const ensurePipeMillTable = async () => {
       created_at TIMESTAMPTZ DEFAULT NOW()
     )
   `;
-  await pool.query(ddl);
-  await pool.query('CREATE UNIQUE INDEX IF NOT EXISTS idx_pipe_mill_unique_code ON pipe_mill (unique_code)');
-  await pool.query('ALTER TABLE pipe_mill ALTER COLUMN sample_timestamp SET DEFAULT CURRENT_TIMESTAMP');
-  await pool.query('ALTER TABLE pipe_mill ADD COLUMN IF NOT EXISTS section VARCHAR(50)');
-  await pool.query('ALTER TABLE pipe_mill ADD COLUMN IF NOT EXISTS item_type VARCHAR(50)');
-  await pool.query('ALTER TABLE pipe_mill ADD COLUMN IF NOT EXISTS thickness VARCHAR(30)');
-  await pool.query('ALTER TABLE pipe_mill ADD COLUMN IF NOT EXISTS picture TEXT');
-  await pool.query('ALTER TABLE pipe_mill ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW()');
+  await mainPool.query(ddl);
+  await mainPool.query('CREATE UNIQUE INDEX IF NOT EXISTS idx_pipe_mill_unique_code ON pipe_mill (unique_code)');
+  await mainPool.query('ALTER TABLE pipe_mill ALTER COLUMN sample_timestamp SET DEFAULT CURRENT_TIMESTAMP');
+  await mainPool.query('ALTER TABLE pipe_mill ADD COLUMN IF NOT EXISTS section VARCHAR(50)');
+  await mainPool.query('ALTER TABLE pipe_mill ADD COLUMN IF NOT EXISTS item_type VARCHAR(50)');
+  await mainPool.query('ALTER TABLE pipe_mill ADD COLUMN IF NOT EXISTS thickness VARCHAR(30)');
+  await mainPool.query('ALTER TABLE pipe_mill ADD COLUMN IF NOT EXISTS picture TEXT');
+  await mainPool.query('ALTER TABLE pipe_mill ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW()');
   logger.info('Ensured pipe_mill table and unique code index exist');
 };
 
@@ -205,17 +206,17 @@ const ensureReCoilerTable = async () => {
       created_at TIMESTAMPTZ DEFAULT NOW()
     )
   `;
-  await pool.query(ddl);
-  await pool.query('CREATE UNIQUE INDEX IF NOT EXISTS idx_re_coiler_unique_code ON re_coiler (unique_code)');
-  await pool.query('ALTER TABLE re_coiler ALTER COLUMN sample_timestamp SET DEFAULT CURRENT_TIMESTAMP');
-  await pool.query('ALTER TABLE re_coiler ADD COLUMN IF NOT EXISTS size VARCHAR(50)');
-  await pool.query('ALTER TABLE re_coiler ADD COLUMN IF NOT EXISTS supervisor VARCHAR(100)');
-  await pool.query('ALTER TABLE re_coiler ADD COLUMN IF NOT EXISTS incharge VARCHAR(100)');
-  await pool.query('ALTER TABLE re_coiler ADD COLUMN IF NOT EXISTS contractor VARCHAR(100)');
-  await pool.query('ALTER TABLE re_coiler ADD COLUMN IF NOT EXISTS machine_number VARCHAR(50)');
-  await pool.query('ALTER TABLE re_coiler ADD COLUMN IF NOT EXISTS welder_name VARCHAR(100)');
-  await pool.query('ALTER TABLE re_coiler ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW()');
-  await pool.query('ALTER TABLE re_coiler ALTER COLUMN unique_code SET NOT NULL');
+  await mainPool.query(ddl);
+  await mainPool.query('CREATE UNIQUE INDEX IF NOT EXISTS idx_re_coiler_unique_code ON re_coiler (unique_code)');
+  await mainPool.query('ALTER TABLE re_coiler ALTER COLUMN sample_timestamp SET DEFAULT CURRENT_TIMESTAMP');
+  await mainPool.query('ALTER TABLE re_coiler ADD COLUMN IF NOT EXISTS size VARCHAR(50)');
+  await mainPool.query('ALTER TABLE re_coiler ADD COLUMN IF NOT EXISTS supervisor VARCHAR(100)');
+  await mainPool.query('ALTER TABLE re_coiler ADD COLUMN IF NOT EXISTS incharge VARCHAR(100)');
+  await mainPool.query('ALTER TABLE re_coiler ADD COLUMN IF NOT EXISTS contractor VARCHAR(100)');
+  await mainPool.query('ALTER TABLE re_coiler ADD COLUMN IF NOT EXISTS machine_number VARCHAR(50)');
+  await mainPool.query('ALTER TABLE re_coiler ADD COLUMN IF NOT EXISTS welder_name VARCHAR(100)');
+  await mainPool.query('ALTER TABLE re_coiler ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW()');
+  await mainPool.query('ALTER TABLE re_coiler ALTER COLUMN unique_code SET NOT NULL');
   logger.info('Ensured re_coiler table and unique code index exist');
 };
 
@@ -245,10 +246,10 @@ const ensureTundishChecklistTable = async () => {
       unique_code TEXT
     )
   `;
-  await pool.query(ddl);
-  await pool.query('CREATE UNIQUE INDEX IF NOT EXISTS idx_tundish_checklist_unique_code ON tundish_checklist (unique_code)');
-  await pool.query('ALTER TABLE tundish_checklist ALTER COLUMN sample_timestamp SET DEFAULT CURRENT_TIMESTAMP');
-  await pool.query(`
+  await mainPool.query(ddl);
+  await mainPool.query('CREATE UNIQUE INDEX IF NOT EXISTS idx_tundish_checklist_unique_code ON tundish_checklist (unique_code)');
+  await mainPool.query('ALTER TABLE tundish_checklist ALTER COLUMN sample_timestamp SET DEFAULT CURRENT_TIMESTAMP');
+  await mainPool.query(`
     DO $$
     BEGIN
       IF EXISTS (
@@ -266,7 +267,7 @@ const ensureTundishChecklistTable = async () => {
       END IF;
     END $$;
   `);
-  await pool.query('ALTER TABLE tundish_checklist ALTER COLUMN unique_code SET NOT NULL');
+  await mainPool.query('ALTER TABLE tundish_checklist ALTER COLUMN unique_code SET NOT NULL');
   logger.info('Ensured tundish_checklist table and unique code index exist');
 };
 
@@ -300,15 +301,15 @@ const ensureLaddleChecklistTable = async () => {
       created_at TIMESTAMPTZ DEFAULT NOW()
     )
   `;
-  await pool.query(ddl);
-  await pool.query('CREATE UNIQUE INDEX IF NOT EXISTS idx_laddle_checklist_unique_code ON laddle_checklist (unique_code)');
-  await pool.query('ALTER TABLE laddle_checklist ALTER COLUMN sample_timestamp SET DEFAULT CURRENT_TIMESTAMP');
-  await pool.query('ALTER TABLE laddle_checklist ALTER COLUMN sample_date TYPE DATE USING sample_date::date');
-  await pool.query('ALTER TABLE laddle_checklist ALTER COLUMN sample_date SET NOT NULL');
-  await pool.query('ALTER TABLE laddle_checklist ALTER COLUMN laddle_number TYPE INTEGER USING laddle_number::integer');
-  await pool.query('ALTER TABLE laddle_checklist ALTER COLUMN laddle_number SET NOT NULL');
-  await pool.query('ALTER TABLE laddle_checklist ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW()');
-  await pool.query('ALTER TABLE laddle_checklist ALTER COLUMN unique_code SET NOT NULL');
+  await mainPool.query(ddl);
+  await mainPool.query('CREATE UNIQUE INDEX IF NOT EXISTS idx_laddle_checklist_unique_code ON laddle_checklist (unique_code)');
+  await mainPool.query('ALTER TABLE laddle_checklist ALTER COLUMN sample_timestamp SET DEFAULT CURRENT_TIMESTAMP');
+  await mainPool.query('ALTER TABLE laddle_checklist ALTER COLUMN sample_date TYPE DATE USING sample_date::date');
+  await mainPool.query('ALTER TABLE laddle_checklist ALTER COLUMN sample_date SET NOT NULL');
+  await mainPool.query('ALTER TABLE laddle_checklist ALTER COLUMN laddle_number TYPE INTEGER USING laddle_number::integer');
+  await mainPool.query('ALTER TABLE laddle_checklist ALTER COLUMN laddle_number SET NOT NULL');
+  await mainPool.query('ALTER TABLE laddle_checklist ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW()');
+  await mainPool.query('ALTER TABLE laddle_checklist ALTER COLUMN unique_code SET NOT NULL');
   logger.info('Ensured laddle_checklist table and unique code index exist');
 };
 
@@ -345,21 +346,21 @@ const ensureLaddleReturnTable = async () => {
       created_at TIMESTAMPTZ DEFAULT NOW()
     )
   `;
-  await pool.query(ddl);
-  await pool.query('CREATE UNIQUE INDEX IF NOT EXISTS idx_laddle_return_unique_code ON laddle_return (unique_code)');
-  await pool.query('ALTER TABLE laddle_return ALTER COLUMN sample_timestamp SET DEFAULT CURRENT_TIMESTAMP');
-  await pool.query('ALTER TABLE laddle_return ALTER COLUMN laddle_return_date TYPE DATE USING laddle_return_date::date');
-  await pool.query('ALTER TABLE laddle_return ALTER COLUMN laddle_return_date SET NOT NULL');
-  await pool.query('ALTER TABLE laddle_return ALTER COLUMN laddle_return_time TYPE TIME USING laddle_return_time::time');
-  await pool.query('ALTER TABLE laddle_return ALTER COLUMN laddle_return_time SET NOT NULL');
-  await pool.query('ALTER TABLE laddle_return ALTER COLUMN poring_temperature TYPE VARCHAR(100)');
-  await pool.query('ALTER TABLE laddle_return ADD COLUMN IF NOT EXISTS poring_temperature_photo TEXT');
-  await pool.query('ALTER TABLE laddle_return ALTER COLUMN ccm_temperature_before_pursing TYPE VARCHAR(100)');
-  await pool.query('ALTER TABLE laddle_return ADD COLUMN IF NOT EXISTS ccm_temp_before_pursing_photo TEXT');
-  await pool.query('ALTER TABLE laddle_return ADD COLUMN IF NOT EXISTS ccm_temp_after_pursing_photo TEXT');
-  await pool.query('ALTER TABLE laddle_return ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW()');
-  await pool.query('ALTER TABLE laddle_return ALTER COLUMN unique_code TYPE VARCHAR(20)');
-  await pool.query('ALTER TABLE laddle_return ALTER COLUMN unique_code SET NOT NULL');
+  await mainPool.query(ddl);
+  await mainPool.query('CREATE UNIQUE INDEX IF NOT EXISTS idx_laddle_return_unique_code ON laddle_return (unique_code)');
+  await mainPool.query('ALTER TABLE laddle_return ALTER COLUMN sample_timestamp SET DEFAULT CURRENT_TIMESTAMP');
+  await mainPool.query('ALTER TABLE laddle_return ALTER COLUMN laddle_return_date TYPE DATE USING laddle_return_date::date');
+  await mainPool.query('ALTER TABLE laddle_return ALTER COLUMN laddle_return_date SET NOT NULL');
+  await mainPool.query('ALTER TABLE laddle_return ALTER COLUMN laddle_return_time TYPE TIME USING laddle_return_time::time');
+  await mainPool.query('ALTER TABLE laddle_return ALTER COLUMN laddle_return_time SET NOT NULL');
+  await mainPool.query('ALTER TABLE laddle_return ALTER COLUMN poring_temperature TYPE VARCHAR(100)');
+  await mainPool.query('ALTER TABLE laddle_return ADD COLUMN IF NOT EXISTS poring_temperature_photo TEXT');
+  await mainPool.query('ALTER TABLE laddle_return ALTER COLUMN ccm_temperature_before_pursing TYPE VARCHAR(100)');
+  await mainPool.query('ALTER TABLE laddle_return ADD COLUMN IF NOT EXISTS ccm_temp_before_pursing_photo TEXT');
+  await mainPool.query('ALTER TABLE laddle_return ADD COLUMN IF NOT EXISTS ccm_temp_after_pursing_photo TEXT');
+  await mainPool.query('ALTER TABLE laddle_return ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW()');
+  await mainPool.query('ALTER TABLE laddle_return ALTER COLUMN unique_code TYPE VARCHAR(20)');
+  await mainPool.query('ALTER TABLE laddle_return ALTER COLUMN unique_code SET NOT NULL');
   const nullableColumns = [
     'furnace_shift_incharge',
     'furnace_crane_driver',
@@ -372,30 +373,30 @@ const ensureLaddleReturnTable = async () => {
     'laddle_return_reason'
   ];
   for (const column of nullableColumns) {
-    await pool.query(`ALTER TABLE laddle_return ALTER COLUMN ${column} DROP NOT NULL`);
+    await mainPool.query(`ALTER TABLE laddle_return ALTER COLUMN ${column} DROP NOT NULL`);
   }
   logger.info('Ensured laddle_return table and unique code index exist');
 };
 
 const connectDatabase = async () => {
-  if (pool) {
-    return pool;
+  if (mainPool) {
+    return mainPool;
   }
 
-  const options = buildConnectionOptions();
+  const options = buildConnectionOptions(config.postgres);
   if (!options) {
-    logger.warn('Database configuration missing. Skipping database connection.');
+    logger.warn('Database configuration missing. Skipping main database connection.');
     return null;
   }
 
   try {
-    pool = new Pool(options);
-    pool.on('error', (error) => {
+    mainPool = new Pool(options);
+    mainPool.on('error', (error) => {
       logger.error('Unexpected PostgreSQL client error', error);
     });
 
-    await pool.query('SELECT 1');
-    logger.info('Database connection established');
+    await mainPool.query('SELECT 1');
+    logger.info('Main database connection established');
 
     await ensureQcLabSamplesTable();
     await ensureSmsRegisterTable();
@@ -405,18 +406,51 @@ const connectDatabase = async () => {
     await ensureTundishChecklistTable();
     await ensureLaddleChecklistTable();
     await ensureLaddleReturnTable();
-    return pool;
+    return mainPool;
   } catch (error) {
     logger.error('Database connection failed', error);
     throw error;
   }
 };
 
-const getPool = () => {
-  if (!pool) {
-    throw new Error('Database has not been initialized. Call connectDatabase() first.');
+const connectAuthDatabase = async () => {
+  if (authPool) {
+    return authPool;
   }
-  return pool;
+
+  const options = buildConnectionOptions(config.authDatabase);
+  if (!options) {
+    logger.warn('Auth database configuration missing. Skipping auth database connection.');
+    return null;
+  }
+
+  try {
+    authPool = new Pool(options);
+    authPool.on('error', (error) => {
+      logger.error('Unexpected PostgreSQL auth client error', error);
+    });
+
+    await authPool.query('SELECT 1');
+    logger.info('Auth database connection established');
+    return authPool;
+  } catch (error) {
+    logger.error('Auth database connection failed', error);
+    throw error;
+  }
 };
 
-module.exports = { connectDatabase, getPool };
+const getPool = () => {
+  if (!mainPool) {
+    throw new Error('Database has not been initialized. Call connectDatabase() first.');
+  }
+  return mainPool;
+};
+
+const getAuthPool = () => {
+  if (!authPool) {
+    throw new Error('Auth database has not been initialized. Call connectAuthDatabase() first.');
+  }
+  return authPool;
+};
+
+module.exports = { connectDatabase, getPool, connectAuthDatabase, getAuthPool };

@@ -38,6 +38,15 @@ Available scripts:
 | `npm start`   | Run the production server                 |
 | `npm run lint`| ESLint check for the CommonJS sources     |
 
+## Auth endpoints
+
+- `POST /auth/register` body `{ "username": string, "password": string, "role": "user" | "admin" }` returns `{ user, token }`
+- `POST /auth/login` body `{ "user_name": string | optional, "username": string | optional, "employee_id": string | optional, "password": string }` returns `{ user, token }`
+  - You can log in with either `user_name`/`username` or `employee_id` plus `password` (no minimum length).
+  - `src/middlewares/auth.js` provides `requireAuth` and `requireRoles('admin', 'user', ...)` to protect routes with JWT + role checks.
+
+JWT payload includes `sub` (user id), `username`, and `role`. Configure `JWT_SECRET` and `JWT_EXPIRES_IN` in `.env`.
+
 ## Current REST endpoints
 
 - `POST /qc-lab-samples` - persists a QC lab sample row in PostgreSQL

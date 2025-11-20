@@ -7,9 +7,11 @@ const pipeMillRoutes = require('./pipeMill.routes');
 const laddleChecklistRoutes = require('./laddleChecklist.routes');
 const tundishChecklistRoutes = require('./tundishChecklist.routes');
 const laddleReturnRoutes = require('./laddleReturn.routes');
+const authRoutes = require('./auth.routes');
 
 const router = Router();
 
+router.use('/', authRoutes);
 router.use('/', qcLabSamplesRoutes);
 router.use('/', smsRegisterRoutes);
 router.use('/', hotCoilRoutes);
