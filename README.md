@@ -40,11 +40,31 @@ Available scripts:
 
 ## Auth endpoints
 
-- `POST /auth/register` body `{ "username": string, "password": string, "role": "user" | "admin" }` returns `{ user, token }`
 - `POST /auth/login` body `{ "user_name": string | optional, "username": string | optional, "employee_id": string | optional, "password": string }` returns `{ user, token }`
   - You can log in with either `user_name`/`username` or `employee_id` plus `password` (no minimum length).
   - `src/middlewares/auth.js` provides `requireAuth` and `requireRoles('admin', 'user', ...)` to protect routes with JWT + role checks.
 - `POST /auth/logout` (requires Bearer token) blacklists the presented token until it expires so re-use is blocked
+- `GET /auth/register` (admin-only) lists all login rows from the `login` table
+- `GET /auth/register/:id` (admin-only) fetches a single login row
+- `PUT /auth/register/:id` (admin-only) updates any login fields (password stored as plain text)
+- `DELETE /auth/register/:id` (admin-only) deletes a login row by id
+- `POST /auth/register` (admin-only) body:
+  ```
+  {
+    "user_name": "string (required)",
+    "password": "string (required)",
+    "role": "user|admin|... defaults to user",
+    "user_id": "optional custom code",
+    "email": "optional",
+    "number": "optional",
+    "department": "optional",
+    "give_by": "optional",
+    "status": "optional, defaults ACTIVE",
+    "user_acess": "optional comma access",
+    "employee_id": "optional"
+  }
+  ```
+  Inserts into `login` table (Batchcode DB) with the password stored as provided (no hashing); returns the created row (sans token).
 
 JWT payload includes `sub` (user id), `username`, and `role`. Configure `JWT_SECRET` and `JWT_EXPIRES_IN` in `.env`.
 

@@ -8,6 +8,34 @@ const login = async (req, res) => {
   res.status(StatusCodes.OK).json(buildResponse('Login successful', { user, token }));
 };
 
+const listRegistrations = async (req, res) => {
+  const users = await authService.listRegistrations();
+  res.status(StatusCodes.OK).json(buildResponse('Users fetched', users));
+};
+
+const register = async (req, res) => {
+  const user = await authService.register(req.body);
+  res.status(StatusCodes.CREATED).json(buildResponse('User registered', user));
+};
+
+const getRegistration = async (req, res) => {
+  const id = Number(req.params.id);
+  const user = await authService.getRegistration(id);
+  res.status(StatusCodes.OK).json(buildResponse('User fetched', user));
+};
+
+const updateRegistration = async (req, res) => {
+  const id = Number(req.params.id);
+  const user = await authService.updateRegistration(id, req.body);
+  res.status(StatusCodes.OK).json(buildResponse('User updated', user));
+};
+
+const deleteRegistration = async (req, res) => {
+  const id = Number(req.params.id);
+  const deleted = await authService.deleteRegistration(id);
+  res.status(StatusCodes.OK).json(buildResponse('User deleted', deleted));
+};
+
 const logout = async (req, res) => {
   // requireAuth adds req.token and req.user
   const token = req.token;
@@ -16,4 +44,12 @@ const logout = async (req, res) => {
   res.status(StatusCodes.OK).json(buildResponse('Logout successful'));
 };
 
-module.exports = { login, logout };
+module.exports = {
+  login,
+  logout,
+  register,
+  listRegistrations,
+  getRegistration,
+  updateRegistration,
+  deleteRegistration
+};

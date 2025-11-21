@@ -379,6 +379,52 @@ const ensureLaddleReturnTable = async () => {
   logger.info('Ensured laddle_return table and unique code index exist');
 };
 
+const ensureLoginTable = async () => {
+  const ddl = `
+    CREATE TABLE IF NOT EXISTS login (
+      id BIGSERIAL PRIMARY KEY,
+      create_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+      user_name VARCHAR(150) NOT NULL,
+      password TEXT NOT NULL,
+      role VARCHAR(50),
+      user_id VARCHAR(50),
+      email VARCHAR(200),
+      number VARCHAR(20),
+      department VARCHAR(100),
+      give_by VARCHAR(150),
+      status VARCHAR(20) DEFAULT 'ACTIVE',
+      user_acess VARCHAR(200),
+      employee_id VARCHAR(50),
+      createdate TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+      updatedate TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+    )
+  `;
+  await mainPool.query(ddl);
+  await mainPool.query(`
+    CREATE OR REPLACE FUNCTION trigger_set_updatedate()
+    RETURNS TRIGGER AS $$
+    BEGIN
+      NEW.updatedate = NOW();
+      RETURN NEW;
+    END;
+    $$ LANGUAGE plpgsql;
+  `);
+  await mainPool.query(`
+    DO $$
+    BEGIN
+      IF NOT EXISTS (
+        SELECT 1 FROM pg_trigger WHERE tgname = 'trg_login_updatedate'
+      ) THEN
+        CREATE TRIGGER trg_login_updatedate
+        BEFORE UPDATE ON login
+        FOR EACH ROW
+        EXECUTE FUNCTION trigger_set_updatedate();
+      END IF;
+    END $$;
+  `);
+  logger.info('Ensured login table exists');
+};
+
 const ensureAuthUsersTable = async () => {
   if (!authPool) {
     return;
@@ -431,6 +477,7 @@ const connectDatabase = async () => {
     await ensureTundishChecklistTable();
     await ensureLaddleChecklistTable();
     await ensureLaddleReturnTable();
+    await ensureLoginTable();
     return mainPool;
   } catch (error) {
     logger.error('Database connection failed', error);
