@@ -378,6 +378,30 @@ const ensureLaddleReturnTable = async () => {
   logger.info('Ensured laddle_return table and unique code index exist');
 };
 
+const ensureAuthUsersTable = async () => {
+  if (!authPool) {
+    return;
+  }
+  const ddl = `
+    CREATE TABLE IF NOT EXISTS public.users (
+      id SERIAL PRIMARY KEY,
+      user_name VARCHAR(150) UNIQUE,
+      username VARCHAR(150),
+      employee_id VARCHAR(150) UNIQUE,
+      password TEXT,
+      password_hash TEXT,
+      role VARCHAR(50) DEFAULT 'user',
+      user_status VARCHAR(50) DEFAULT 'active',
+      email_id VARCHAR(200),
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    )
+  `;
+  await authPool.query(ddl);
+  await authPool.query('CREATE UNIQUE INDEX IF NOT EXISTS idx_users_user_name ON public.users (user_name)');
+  await authPool.query('CREATE UNIQUE INDEX IF NOT EXISTS idx_users_employee_id ON public.users (employee_id)');
+  logger.info('Ensured auth users table exists');
+};
+
 const connectDatabase = async () => {
   if (mainPool) {
     return mainPool;
@@ -432,6 +456,7 @@ const connectAuthDatabase = async () => {
 
     await authPool.query('SELECT 1');
     logger.info('Auth database connection established');
+    await ensureAuthUsersTable();
     return authPool;
   } catch (error) {
     logger.error('Auth database connection failed', error);
