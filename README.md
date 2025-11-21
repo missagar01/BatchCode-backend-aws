@@ -44,6 +44,7 @@ Available scripts:
 - `POST /auth/login` body `{ "user_name": string | optional, "username": string | optional, "employee_id": string | optional, "password": string }` returns `{ user, token }`
   - You can log in with either `user_name`/`username` or `employee_id` plus `password` (no minimum length).
   - `src/middlewares/auth.js` provides `requireAuth` and `requireRoles('admin', 'user', ...)` to protect routes with JWT + role checks.
+- `POST /auth/logout` (requires Bearer token) blacklists the presented token until it expires so re-use is blocked
 
 JWT payload includes `sub` (user id), `username`, and `role`. Configure `JWT_SECRET` and `JWT_EXPIRES_IN` in `.env`.
 
@@ -70,6 +71,56 @@ JWT payload includes `sub` (user id), `username`, and `role`. Configure `JWT_SEC
 - `POST /laddle-return` - stores laddle return forms (with optional photo uploads) and auto-generated `L-XXXX` codes
 - `GET /laddle-return` - lists all laddle return entries or filters by `id`/`unique_code`
 - `GET /laddle-return/:unique_code` - fetch a single laddle return entry directly by its code
+- `GET /admin/overview` - admin-only aggregate view across all tables, optional `unique_code` query to filter every table by the same code
+
+### Admin overview response
+
+Requires a Bearer token with role `admin`, `superadmin`, or `super_admin`.
+
+```
+GET /admin/overview?unique_code=QC-ABCD
+Authorization: Bearer <JWT>
+```
+
+You can also pass the same filter as a path parameter:
+
+```
+GET /admin/overview/QC-ABCD
+```
+
+Successful responses return every table plus counts so dashboards can build filters/graphs:
+
+```json
+{
+  "success": true,
+  "message": "Admin data fetched",
+  "data": {
+    "qc_lab_samples": [/* rows */],
+    "sms_register": [],
+    "hot_coil": [],
+    "re_coiler": [],
+    "pipe_mill": [],
+    "laddle_checklist": [],
+    "tundish_checklist": [],
+    "laddle_return": []
+  },
+  "meta": {
+    "counts": {
+      "qc_lab_samples": 1,
+      "sms_register": 0,
+      "hot_coil": 0,
+      "re_coiler": 0,
+      "pipe_mill": 0,
+      "laddle_checklist": 0,
+      "tundish_checklist": 0,
+      "laddle_return": 0
+    },
+    "filters": { "unique_code": "QC-ABCD" }
+  }
+}
+```
+
+Omit `unique_code` to fetch all data from every table (ordered newest first per table).
 
 ### QC Lab Samples payload
 

@@ -2,6 +2,7 @@ const jwt = require('jsonwebtoken');
 const { StatusCodes } = require('http-status-codes');
 const config = require('../config/env');
 const ApiError = require('../utils/apiError');
+const tokenBlacklist = require('../utils/tokenBlacklist');
 
 const extractToken = (req) => {
   const header = req.headers.authorization || req.headers.Authorization;
@@ -23,7 +24,11 @@ const requireAuth = (req, _res, next) => {
 
   try {
     const decoded = jwt.verify(token, config.jwt.secret);
+    if (tokenBlacklist.isBlacklisted(token)) {
+      return next(new ApiError(StatusCodes.UNAUTHORIZED, 'Token has been logged out'));
+    }
     req.user = decoded;
+    req.token = token;
     return next();
   } catch (error) {
     return next(new ApiError(StatusCodes.UNAUTHORIZED, 'Invalid or expired token'));
