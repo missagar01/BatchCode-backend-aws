@@ -267,6 +267,7 @@ const ensureTundishChecklistTable = async () => {
       END IF;
     END $$;
   `);
+
   await mainPool.query('ALTER TABLE tundish_checklist ALTER COLUMN unique_code SET NOT NULL');
   logger.info('Ensured tundish_checklist table and unique code index exist');
 };
