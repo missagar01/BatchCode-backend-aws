@@ -16,6 +16,27 @@ jobs:
       RUNNER_TEMP: /home/ubuntu/actions-runner/_temp
       RUNNER_TOOL_CACHE: /home/ubuntu/actions-runner/_tool
       DEPLOY_DIR: /home/ubuntu/BatchCode-backend-aws
+      NODE_ENV: development
+      PORT: 3005
+      LOG_LEVEL: info
+      PG_HOST: ${{ secrets.PG_HOST }}
+      PG_PORT: 5432
+      PG_USER: ${{ secrets.PG_USER }}
+      PG_PASSWORD: ${{ secrets.PG_PASSWORD }}
+      PG_DATABASE: ${{ secrets.PG_DATABASE }}
+      PG_SSL: true
+      DB_HOST: ${{ secrets.DB_HOST }}
+      DB_PORT: 5432
+      DB_USER: ${{ secrets.DB_USER }}
+      DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+      DB_NAME: ${{ secrets.DB_NAME }}
+      DB_SSL: true
+      JWT_SECRET: ${{ secrets.JWT_SECRET }}
+      JWT_EXPIRES_IN: 1d
+      AWS_REGION: ap-south-1
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_BUCKET_NAME: ${{ secrets.AWS_BUCKET_NAME }}
 
     steps:
       - name: "📥 Checkout code"
@@ -70,6 +91,35 @@ jobs:
           echo "Using DEPLOY_DIR=$DEPLOY_DIR"
 
           cd "$DEPLOY_DIR"
+
+          echo "Writing .env from workflow secrets..."
+          cat > .env <<'EOF'
+NODE_ENV=${NODE_ENV}
+PORT=${PORT}
+LOG_LEVEL=${LOG_LEVEL}
+
+PG_HOST=${PG_HOST}
+PG_PORT=${PG_PORT}
+PG_USER=${PG_USER}
+PG_PASSWORD=${PG_PASSWORD}
+PG_DATABASE=${PG_DATABASE}
+PG_SSL=${PG_SSL}
+
+DB_HOST=${DB_HOST}
+DB_PORT=${DB_PORT}
+DB_USER=${DB_USER}
+DB_PASSWORD=${DB_PASSWORD}
+DB_NAME=${DB_NAME}
+DB_SSL=${DB_SSL}
+
+JWT_SECRET=${JWT_SECRET}
+JWT_EXPIRES_IN=${JWT_EXPIRES_IN}
+
+AWS_REGION=${AWS_REGION}
+AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+AWS_BUCKET_NAME=${AWS_BUCKET_NAME}
+EOF
 
           # Deploy dir me dependencies install/update करो
           npm ci
