@@ -79,6 +79,50 @@ const findAllLogins = async () => {
   return rows;
 };
 
+const findLoginForAuth = async ({ userName, employeeId }) => {
+  const values = [];
+  const conditions = [];
+
+  if (userName) {
+    values.push(userName);
+    conditions.push(`user_name = $${values.length}`);
+  }
+
+  if (employeeId) {
+    values.push(employeeId);
+    conditions.push(`employee_id = $${values.length}`);
+  }
+
+  if (!conditions.length) {
+    return null;
+  }
+
+  const query = `
+    SELECT
+      id,
+      create_at,
+      user_name,
+      password,
+      role,
+      user_id,
+      email,
+      number,
+      department,
+      give_by,
+      status,
+      user_acess,
+      employee_id,
+      createdate,
+      updatedate
+    FROM login
+    WHERE ${conditions.join(' OR ')}
+    LIMIT 1
+  `;
+
+  const { rows } = await getPool().query(query, values);
+  return rows[0] || null;
+};
+
 const findLoginById = async (id) => {
   const query = `
     SELECT
@@ -173,6 +217,7 @@ const deleteLogin = async (id) => {
 module.exports = {
   insertLogin,
   findAllLogins,
+  findLoginForAuth,
   findLoginById,
   updateLogin,
   deleteLogin

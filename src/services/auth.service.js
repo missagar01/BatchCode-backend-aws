@@ -2,7 +2,6 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const { StatusCodes } = require('http-status-codes');
-const authRepository = require('../repositories/auth.repository');
 const loginRepository = require('../repositories/login.repository');
 const config = require('../config/env');
 const ApiError = require('../utils/apiError');
@@ -22,7 +21,10 @@ const buildToken = (user) => {
 
 const login = async ({ user_name, employee_id, password, username }) => {
   const lookupName = user_name ?? username;
-  const user = await authRepository.findByLogin({ userName: lookupName, employeeId: employee_id });
+  const user = await loginRepository.findLoginForAuth({
+    userName: lookupName,
+    employeeId: employee_id
+  });
   if (!user) {
     throw new ApiError(StatusCodes.UNAUTHORIZED, 'Invalid credentials');
   }
@@ -38,7 +40,8 @@ const login = async ({ user_name, employee_id, password, username }) => {
     throw new ApiError(StatusCodes.UNAUTHORIZED, 'Invalid credentials');
   }
 
-  const createdAtIso = user.created_at ? new Date(user.created_at).toISOString() : null;
+  const createdAt = user.created_at ?? user.create_at ?? user.createdate;
+  const createdAtIso = createdAt ? new Date(createdAt).toISOString() : null;
 
   const safeUser = {
     id: user.id,
