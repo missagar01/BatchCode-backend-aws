@@ -1,26 +1,31 @@
-const crypto = require('crypto');
 const smsRegisterRepository = require('../repositories/smsRegister.repository');
 
-const CODE_PREFIX = 'S-';
-const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-const SEGMENT_LENGTH = 4;
-const MAX_GENERATION_ATTEMPTS = 7;
+const MAX_GENERATION_ATTEMPTS = 5;
 
-const generateUniqueCode = () => {
-  const bytes = crypto.randomBytes(SEGMENT_LENGTH);
-  let segment = '';
-  for (let index = 0; index < SEGMENT_LENGTH; index += 1) {
-    segment += ALPHABET[bytes[index] % ALPHABET.length];
-  }
-  return `${CODE_PREFIX}${segment}`;
+const toDateOrNow = (value) => {
+  const dateCandidate = value ? new Date(value) : new Date();
+  return Number.isNaN(dateCandidate.getTime()) ? new Date() : dateCandidate;
 };
 
+const formatDay = (dateObj) => String(dateObj.getDate()).padStart(2, '0');
+const formatSequence = (num) => String(num).padStart(2, '0');
+
 const createSmsRegister = async (payload) => {
+  const targetDate = toDateOrNow(payload?.sample_timestamp);
+  const targetDateISO = targetDate.toISOString().slice(0, 10); // YYYY-MM-DD
+
   for (let attempt = 0; attempt < MAX_GENERATION_ATTEMPTS; attempt += 1) {
-    const unique_code = generateUniqueCode();
+    const currentCount = await smsRegisterRepository.countByDate(targetDateISO);
+    const nextSequence = currentCount + 1;
+    const unique_code = `${formatDay(targetDate)}${formatSequence(nextSequence)}`;
+
     try {
-      return await smsRegisterRepository.insertSmsRegister({ ...payload, unique_code });
+      return await smsRegisterRepository.insertSmsRegister({
+        ...payload,
+        unique_code
+      });
     } catch (error) {
+      // Unique constraint violation => retry with next sequence number
       if (error?.code === '23505') {
         continue;
       }
@@ -28,7 +33,7 @@ const createSmsRegister = async (payload) => {
     }
   }
 
-  throw new Error('Unable to generate a unique SMS register code after multiple attempts');
+  throw new Error('Unable to generate a daily unique SMS register code after multiple attempts');
 };
 
 const listSmsRegisters = async (filters = {}) => smsRegisterRepository.findSmsRegisters(filters);

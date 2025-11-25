@@ -57,7 +57,7 @@ const insertHotCoil = async (payload) => {
   return rows[0];
 };
 
-const findHotCoilEntries = async ({ id, uniqueCode } = {}) => {
+const findHotCoilEntries = async ({ id, uniqueCode, smsShortCode } = {}) => {
   const filters = [];
   const values = [];
 
@@ -69,6 +69,11 @@ const findHotCoilEntries = async ({ id, uniqueCode } = {}) => {
   if (typeof uniqueCode === 'string') {
     values.push(uniqueCode);
     filters.push(`unique_code = $${values.length}`);
+  }
+
+  if (typeof smsShortCode === 'string') {
+    values.push(smsShortCode);
+    filters.push(`sms_short_code = $${values.length}`);
   }
 
   let query = `

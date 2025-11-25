@@ -46,29 +46,6 @@ const createHotCoilSchema = {
       strand2_temperature: optionalTrimmedString('strand2_temperature'),
       shift_supervisor: optionalTrimmedString('shift_supervisor')
     })
-    .superRefine((data, ctx) => {
-      const isColdBillet = (data.submission_type ?? '').toLowerCase() === 'cold billet';
-      if (isColdBillet) {
-        return;
-      }
-      const requiredFields = [
-        'size',
-        'mill_incharge',
-        'quality_supervisor',
-        'electrical_dc_operator',
-        'strand1_temperature',
-        'strand2_temperature'
-      ];
-      requiredFields.forEach((field) => {
-        if (!data[field]) {
-          ctx.addIssue({
-            code: z.ZodIssueCode.custom,
-            path: [field],
-            message: `${field} is required when submission_type is Hot Coil`
-          });
-        }
-      });
-    })
 };
 
 module.exports = { createHotCoilSchema };

@@ -36,15 +36,41 @@ const optionalStringField = (field, max = 255) =>
     })
     .refine((value) => value === null || value.length <= max, `${field} must be at most ${max} characters`);
 
+const optionalListField = (field, max = 255) =>
+  z
+    .union([z.string(), z.array(z.string()), z.null()])
+    .optional()
+    .transform((value) => {
+      if (value === undefined || value === null) {
+        return null;
+      }
+      const values = Array.isArray(value) ? value : [value];
+      const joined = values
+        .map((v) => (v === undefined || v === null ? '' : String(v).trim()))
+        .filter(Boolean)
+        .join(', ');
+      return joined.length ? joined : null;
+    })
+    .refine((value) => value === null || value.length <= max, `${field} must be at most ${max} characters`);
+
+const machineNumberArray = z
+  .union([
+    z.array(z.string()),
+    z
+      .string()
+      .transform((value) => value.split(',').map((v) => v.trim()).filter(Boolean))
+  ])
+  .transform((arr) => arr.map((v) => v.toUpperCase()));
+
 const createReCoilerSchema = {
   body: z.object({
     sample_timestamp: timestampField,
     hot_coiler_short_code: trimmedString('hot_coiler_short_code', 50),
     size: optionalStringField('size', 50),
-    supervisor: optionalStringField('supervisor', 100),
+    supervisor: optionalListField('supervisor', 255),
     incharge: optionalStringField('incharge', 100),
-    contractor: optionalStringField('contractor', 100),
-    machine_number: optionalStringField('machine_number', 50),
+    contractor: optionalListField('contractor', 255),
+    machine_number: machineNumberArray,
     welder_name: optionalStringField('welder_name', 100)
   })
 };

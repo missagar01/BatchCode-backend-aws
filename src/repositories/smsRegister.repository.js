@@ -1,5 +1,16 @@
 const { getPool } = require('../config/database');
 
+const countByDate = async (dateISO) => {
+  const query = `
+    SELECT COUNT(*)::int AS total
+    FROM sms_register
+    WHERE DATE(sample_timestamp) = $1::date
+  `;
+
+  const { rows } = await getPool().query(query, [dateISO]);
+  return rows[0]?.total ?? 0;
+};
+
 const insertSmsRegister = async (payload) => {
   const {
     sample_timestamp,
@@ -71,10 +82,10 @@ const findSmsRegisters = async ({ id, uniqueCode } = {}) => {
     query += ` WHERE ${filters.join(' OR ')}`;
   }
 
-  query += ' ORDER BY sample_timestamp DESC NULLS LAST, id DESC';
+  query += ' ORDER BY sample_timestamp ASC NULLS LAST, id ASC';
 
   const { rows } = await getPool().query(query, values);
   return rows;
 };
 
-module.exports = { insertSmsRegister, findSmsRegisters };
+module.exports = { insertSmsRegister, findSmsRegisters, countByDate };

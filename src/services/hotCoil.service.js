@@ -1,34 +1,65 @@
-const crypto = require('crypto');
+const { StatusCodes } = require('http-status-codes');
+const ApiError = require('../utils/apiError');
 const hotCoilRepository = require('../repositories/hotCoil.repository');
+const smsRegisterRepository = require('../repositories/smsRegister.repository');
 
-const CODE_PREFIX = 'H-';
-const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-const SEGMENT_LENGTH = 4;
-const MAX_GENERATION_ATTEMPTS = 7;
+const resolveSmsCode = (payload) => {
+  const candidates = [payload?.sms_short_code, payload?.unique_code].filter(
+    (val) => typeof val === 'string' && val.trim().length
+  );
+  return candidates.length ? candidates[0].trim() : null;
+};
 
-const generateUniqueCode = () => {
-  const bytes = crypto.randomBytes(SEGMENT_LENGTH);
-  let segment = '';
-  for (let index = 0; index < SEGMENT_LENGTH; index += 1) {
-    segment += ALPHABET[bytes[index] % ALPHABET.length];
-  }
-  return `${CODE_PREFIX}${segment}`;
+const normalizePayload = (payload = {}) => {
+  // Accept common Postman variations (e.g., "Mill Incharge") by folding to expected snake_case keys.
+  const aliases = [
+    ['mill_incharge', ['Mill Incharge', 'millIncharge', 'mill incharge']],
+    ['quality_supervisor', ['Quality Supervisor', 'qualitySupervisor', 'quality supervisor']],
+    ['electrical_dc_operator', ['electrical_dc_operator', 'electrical dc operator', 'Electrical DC Operator']]
+  ];
+
+  const normalized = { ...payload };
+
+  aliases.forEach(([target, keys]) => {
+    if (normalized[target]) {
+      return;
+    }
+    keys.forEach((key) => {
+      if (normalized[key] !== undefined) {
+        normalized[target] = normalized[key];
+      }
+    });
+  });
+
+  return normalized;
 };
 
 const createHotCoil = async (payload) => {
-  for (let attempt = 0; attempt < MAX_GENERATION_ATTEMPTS; attempt += 1) {
-    const unique_code = generateUniqueCode();
-    try {
-      return await hotCoilRepository.insertHotCoil({ ...payload, unique_code });
-    } catch (error) {
-      if (error?.code === '23505') {
-        continue;
-      }
-      throw error;
-    }
+  const normalizedPayload = normalizePayload(payload);
+  const smsShortCode = resolveSmsCode(payload);
+  if (!smsShortCode) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'sms_short_code (or unique_code) is required');
   }
 
-  throw new Error('Unable to generate a unique Hot Coil code after multiple attempts');
+  // Check if code exists in sms_register; warn clients if missing but don't block insert.
+  const smsRegisterRows = await smsRegisterRepository.findSmsRegisters({ uniqueCode: smsShortCode });
+  const smsRegisterFound = smsRegisterRows.length > 0;
+
+  const unique_code = smsShortCode;
+
+  // Use the provided SMS code for linkage; unique_code must match sms_short_code per requirements.
+  const record = await hotCoilRepository.insertHotCoil({
+    ...normalizedPayload,
+    sms_short_code: smsShortCode,
+    unique_code
+  });
+
+  // Attach a hint if the code was not found in sms_register (non-blocking).
+  if (!smsRegisterFound) {
+    record._warning = `sms_short_code ${smsShortCode} was not found in sms_register`;
+  }
+
+  return record;
 };
 
 const listHotCoilEntries = async (filters = {}) => hotCoilRepository.findHotCoilEntries(filters);

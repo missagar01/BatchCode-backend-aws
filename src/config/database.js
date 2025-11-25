@@ -207,7 +207,8 @@ const ensureReCoilerTable = async () => {
     )
   `;
   await mainPool.query(ddl);
-  await mainPool.query('CREATE UNIQUE INDEX IF NOT EXISTS idx_re_coiler_unique_code ON re_coiler (unique_code)');
+  // Allow duplicate unique_code values per requirements; drop legacy unique index if it exists.
+  await mainPool.query('DROP INDEX IF EXISTS idx_re_coiler_unique_code');
   await mainPool.query('ALTER TABLE re_coiler ALTER COLUMN sample_timestamp SET DEFAULT CURRENT_TIMESTAMP');
   await mainPool.query('ALTER TABLE re_coiler ADD COLUMN IF NOT EXISTS size VARCHAR(50)');
   await mainPool.query('ALTER TABLE re_coiler ADD COLUMN IF NOT EXISTS supervisor VARCHAR(100)');
